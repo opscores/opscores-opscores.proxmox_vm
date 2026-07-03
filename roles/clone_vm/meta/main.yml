@@ -1,0 +1,23 @@
+galaxy_info:
+  author: Alexey Gorynovich
+  description: Clone Proxmox VMs from templates with cloud-init configuration
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.13.9"
+  platforms:
+    - name: EL
+      versions:
+        - all
+    - name: Fedora
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+  galaxy_tags:
+    - proxmox
+    - virtualization
+    - vm
+    - clone
+    - cloudinit
+    - automation
+dependencies: []

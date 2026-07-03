@@ -1,0 +1,24 @@
+galaxy_info:
+  author: Alexey Gorynovich
+  description: Create Proxmox VM templates from cloud images
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.13.9"
+  platforms:
+    - name: EL
+      versions:
+        - all
+    - name: Fedora
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+  galaxy_tags:
+    - proxmox
+    - virtualization
+    - vm
+    - template
+    - cloud
+    - cloudinit
+    - automation
+dependencies: []

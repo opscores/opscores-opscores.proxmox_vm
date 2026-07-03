@@ -1,0 +1,69 @@
+#cloud-config
+# Ubuntu 26.04-specific cloud-init configuration
+
+hostname: "{{ new_vm_name }}"
+manage_etc_hosts: false
+preserve_hostname: false
+
+timezone: "{{ timezone | default('Europe/Moscow') }}"
+locale: en_US.UTF-8
+
+resize_rootfs: true
+growpart:
+  mode: auto
+  devices: ['/']
+
+package_update: false
+package_upgrade: false
+package_reboot_if_required: false
+packages:
+  - qemu-guest-agent
+  - curl
+  - wget
+  - htop
+  - net-tools
+  - cloud-utils
+  - cloud-guest-utils
+  - apt-transport-https
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - snapd
+
+users:
+  - name: {{ cloud_user }}
+    primary_group: {{ cloud_user }}
+    groups: [adm, audio, cdrom, dialout, dip, floppy, lxd, netdev, plugdev, sudo, video]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/bash
+    lock_passwd: false
+    passwd: "{{ cloud_password | password_hash('sha512') }}"
+    ssh_authorized_keys:
+      - {{ ssh_public_key }}
+
+ssh_pwauth: true
+disable_root: true
+
+bootcmd:
+  - [systemd-machine-id-setup]
+
+runcmd:
+  - [hostnamectl, set-hostname, "{{ new_vm_name }}"]
+  - [timedatectl, set-timezone, "{{ timezone | default('Europe/Moscow') }}"]
+  - [systemctl, enable, qemu-guest-agent]
+  - [systemctl, start, qemu-guest-agent]
+  - [snap, install, certbot, --classic]
+  - [apt-get, install, -y, software-properties-common]
+  - [add-apt-repository, -y, universe]
+  - [sed, -i, 's/^#?PubkeyAuthentication.*/PubkeyAuthentication yes/', /etc/ssh/sshd_config]
+  - [sed, -i, 's/#PasswordAuthentication yes/PasswordAuthentication yes/', /etc/ssh/sshd_config]
+  - [sed, -i, 's/#PermitRootLogin prohibit-password/PermitRootLogin no/', /etc/ssh/sshd_config]
+  - [sed, -i, 's/PasswordAuthentication no/PasswordAuthentication yes/', /etc/ssh/sshd_config]
+  - [systemctl, restart, sshd]
+  - [chown, -R, '{{ cloud_user }}:{{ cloud_user }}', '/home/{{ cloud_user }}/.ssh']
+  - ['chmod', '700', '/home/{{ cloud_user }}/.ssh']
+  - ['chmod', '600', '/home/{{ cloud_user }}/.ssh/authorized_keys']
+  - [update-grub]
+  - [systemctl, enable, --now, fstrim.timer]
+
+final_message: "Ubuntu 26.04 cloud-init completed successfully at $UPTIME"

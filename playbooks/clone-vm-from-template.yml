@@ -1,0 +1,27 @@
+---
+- name: Clone and Configure VM from Template
+  hosts: proxmox
+  vars:
+    # Source template configuration
+    source_vm_id: 3001      # Source template ID (3000=Ubuntu24, 3004=Ubuntu26, 3001=AlmaLinux, 3002=Fedora)
+    os_type: "almalinux"      # OS type: 'ubuntu24', 'ubuntu26', 'almalinux' or 'fedora'
+
+    # New VM configuration
+    new_vm_id: 8001         # New VM ID
+    new_vm_name: "test-almalinux" # Desired hostname for the new VM
+    cloud_user: "ansible"
+    cloud_password: "{{ vault_cloud_password | default('changeme') }}"  # Use ansible-vault
+    ssh_public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}" # Path to your public SSH key
+
+    # Proxmox environment (values from inventory)
+    target_node: "{{ proxmox_node }}"
+    storage_pool: "{{ vm_storage_pool }}"
+    full_clone: true
+
+  collections:
+    - opscores.proxmox_vm
+
+  tasks:
+    - name: Clone VM
+      include_role:
+        name: clone_vm

@@ -1,0 +1,39 @@
+---
+- name: Clone VM from Template with Static IP
+  hosts: proxmox
+  collections:
+    - opscores.proxmox_vm
+
+  vars:
+    # Source template configuration
+    source_vm_id: 3002      # Source template ID (3000=Ubuntu24, 3004=Ubuntu26, 3001=AlmaLinux, 3002=Fedora)
+    os_type: "fedora"      # OS type: 'ubuntu24', 'ubuntu26', 'almalinux' or 'fedora'
+
+    # New VM configuration
+    new_vm_id: 8002         # New VM ID
+    new_vm_name: "static-fedora-vm" # Desired hostname for the new VM
+    cloud_user: "ansible"
+    cloud_password: "{{ vault_cloud_password | default('changeme') }}"  # Use ansible-vault
+    ssh_public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}" # Path to your public SSH key
+
+    # Proxmox environment (values from inventory)
+    target_node: "{{ proxmox_node }}"
+    storage_pool: "{{ vm_storage_pool }}"
+    full_clone: true
+    recreate_vm: false
+
+    # VM parameters (override template defaults)
+    vm_memory: 2048  # VM memory in MB
+    vm_cores: 2      # Number of CPU cores
+    vm_disk_size: "12G"  # Disk size
+
+    # Network configuration (static IP)
+    use_dhcp_ip: false  # Disable DHCP, use static IP instead
+    static_ip_address: "192.168.1.102"  # Static IP address
+    static_subnet_mask: "24"  # Subnet mask in CIDR format
+    static_gateway: "192.168.1.1"  # Gateway
+
+  tasks:
+    - name: Clone VM with Static IP
+      include_role:
+        name: clone_vm

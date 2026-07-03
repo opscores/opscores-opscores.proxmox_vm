@@ -1,0 +1,26 @@
+# defaults/main.yml
+vm_storage_pool: "vmpool"
+storage_min_free_gb: 10
+
+dns_servers: "8.8.8.8 8.8.4.4"
+search_domains: "local"
+
+vm_resize_disk: true
+clone_vm_disk_size: "{{ vm_disk_size | default('12G') }}"
+clone_vm_disk_slot: "{{ vm_disk_slot | default('scsi0') }}"
+
+clone_vm_memory: "{{ vm_memory | default(omit) }}"
+clone_vm_cores: "{{ vm_cores | default(omit) }}"
+clone_vm_ostype: "{{ vm_ostype | default(omit) }}"
+clone_vm_machine: "{{ vm_machine | default(omit) }}"
+clone_vm_bios: "{{ vm_bios | default(omit) }}"
+clone_vm_cpu: "{{ vm_cpu | default(omit) }}"
+clone_vm_scsihw: "{{ vm_scsihw | default('virtio-scsi-pci') }}"
+clone_vm_agent: "{{ vm_agent | default('enabled=1') }}"
+
+recreate_vm: false
+
+use_dhcp_ip: true
+static_ip_address: ""
+static_subnet_mask: "24"
+static_gateway: ""

@@ -1,0 +1,33 @@
+all:
+  children:
+    proxmox:
+      hosts:
+        pve01:
+          ansible_host: 192.168.160.200
+          ansible_user: "{{ vault_ansible_user | default('ansible') }}"
+          ansible_become: yes
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "{{ vault_proxmox_password }}"
+          proxmox_host: "192.168.160.200"
+          proxmox_node: "pve01"
+          proxmox_user: "root@pam"
+          proxmox_password: "{{ vault_proxmox_password }}"
+          vm_storage_pool: "vmpool"
+          ssh_public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+          vm_network_bridge: "vmbr0"
+          dns_servers: "8.8.8.8 8.8.4.4"
+          search_domains: "local"
+      vars:
+        create_ubuntu24_template: false
+        create_ubuntu26_template: false
+        create_almalinux_template: true
+        create_fedora_template: true
+        cleanup_downloaded_images: false
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_common_args: -o StrictHostKeyChecking=no
+    vm_memory: 4096
+    vm_cores: 2
+    vm_disk_size: "12G"

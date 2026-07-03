@@ -1,0 +1,23 @@
+namespace: opscores
+name: proxmox_vm
+version: 1.0.0
+readme: README.md
+authors:
+  - Alexey Gorynovich
+description: Proxmox VM management — templates from cloud images and cloning with cloud-init
+license:
+  - GPL-3.0-or-later
+tags:
+  - proxmox
+  - virtualization
+  - vm
+  - cloud
+  - cloudinit
+  - template
+dependencies: {}
+repository: https://github.com/opscores/opscores.proxmox_vm
+documentation: https://github.com/opscores/opscores.proxmox_vm
+homepage: https://github.com/opscores/opscores.proxmox_vm
+issues: https://github.com/opscores/opscores.proxmox_vm/issues
+build_ignore:
+  - '*.tar.gz'

@@ -1,0 +1,39 @@
+# vars/main.yml
+# Пользовательские переопределения переменных для шаблонов
+
+# custom_create_ubuntu24_template: true
+# custom_create_ubuntu26_template: false
+# custom_create_almalinux_template: true
+# custom_create_fedora_template: false
+
+# custom_ubuntu24_template_id: 4000
+# custom_ubuntu26_template_id: 4004
+# custom_almalinux_template_id: 4001
+# custom_fedora_template_id: 4002
+
+# custom_ubuntu24_image_url: "http://local-mirror.local/noble-server-cloudimg-amd64.img"
+# custom_ubuntu26_image_url: "http://local-mirror.local/resolute-server-cloudimg-amd64.img"
+# custom_almalinux_image_url: "http://local-mirror.local/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2"
+# custom_fedora_image_url: "http://local-mirror.local/Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2"
+
+# custom_ubuntu24_image_filename: "noble-server-cloudimg-amd64.img"
+# custom_ubuntu26_image_filename: "resolute-server-cloudimg-amd64.img"
+# custom_almalinux_image_filename: "AlmaLinux-9-GenericCloud-latest.x86_64.qcow2"
+# custom_fedora_image_filename: "Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2"
+
+# custom_ubuntu24_image_base_url: "http://local-mirror.local/ubuntu-cloud-images/noble/current"
+# custom_ubuntu26_image_base_url: "http://local-mirror.local/ubuntu-cloud-images/resolute/current"
+# custom_almalinux_image_base_url: "http://local-mirror.local/almalinux/9.7/cloud/x86_64/images"
+# custom_fedora_image_base_url: "http://local-mirror.local/fedora/linux/releases/43/Cloud/x86_64/images"
+
+# custom_recreate_templates: true
+# custom_recreate_ubuntu24_template: false
+# custom_recreate_ubuntu26_template: false
+# custom_recreate_almalinux_template: false
+# custom_recreate_fedora_template: false
+
+# custom_cleanup_downloaded_images: true
+# custom_cleanup_ubuntu24_image: true
+# custom_cleanup_ubuntu26_image: true
+# custom_cleanup_almalinux_image: true
+# custom_cleanup_fedora_image: true
