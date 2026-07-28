@@ -24,10 +24,12 @@
       vm_memory: "{{ item.value.memory | default(vm_defaults.memory) }}"
       vm_cores: "{{ item.value.cores | default(vm_defaults.cores) }}"
       vm_disk_size: "{{ item.value.disk_size | default(vm_defaults.disk_size) }}"
-      vm_network_bridge: "{{ item.value.network_bridge | default(vm_defaults.network_bridge) }}"
-      enabled: true
-      recreate: "{{ item.value.recreate | default(recreate_templates) }}"
-      cleanup_image: "{{ item.value.cleanup_image | default(cleanup_downloaded_images) }}"
+       vm_network_bridge: "{{ item.value.network_bridge | default(vm_defaults.network_bridge) }}"
+       scsihw: "{{ item.value.scsihw | default(vm_defaults.scsihw) }}"
+       agent: "{{ item.value.agent | default(vm_defaults.agent) }}"
+       enabled: true
+       recreate: "{{ item.value.recreate | default(recreate_templates) }}"
+       cleanup_image: "{{ item.value.cleanup_image | default(cleanup_downloaded_images) }}"
 
 # Preflight checks
 - name: Preflight — check free space in /tmp for image downloads
@@ -115,8 +117,8 @@
         --machine {{ item.machine }} \
         --bios {{ item.bios }} \
         --cpu "{{ item.cpu_type }}" \
-        --scsihw virtio-scsi-pci \
-        --agent enabled=1
+        --scsihw {{ item.scsihw }} \
+        --agent {{ item.agent }}
   loop: "{{ active_templates }}"
   when:
     - vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool

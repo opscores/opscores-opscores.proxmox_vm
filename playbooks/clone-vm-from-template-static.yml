@@ -23,9 +23,9 @@
     recreate_vm: false
 
     # VM parameters (override template defaults)
-    vm_memory: 2048  # VM memory in MB
-    vm_cores: 2      # Number of CPU cores
-    vm_disk_size: "12G"  # Disk size
+    clone_vm_memory: 2048  # VM memory in MB
+    clone_vm_cores: 2      # Number of CPU cores
+    clone_vm_disk_size: "12G"  # Disk size
 
     # Network configuration (static IP)
     use_dhcp_ip: false  # Disable DHCP, use static IP instead

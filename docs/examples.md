@@ -21,14 +21,12 @@ ansible-galaxy collection install git+https://github.com/username/ansible-collec
   collections:
     - opscores.proxmox_vm
   vars:
-    vm_memory: 4096
-    vm_cores: 2
-    vm_disk_size: "12G"
-    vm_network_bridge: "vmbr0"
+    vm_defaults:
+      memory: 4096
+      cores: 2
+      disk_size: "12G"
+      network_bridge: "vmbr0"
     cleanup_downloaded_images: true
-    ubuntu_create: true
-    almalinux_create: true
-    fedora_create: true
   tasks:
     - name: Create Templates
       include_role:
@@ -44,11 +42,7 @@ ansible-galaxy collection install git+https://github.com/username/ansible-collec
   collections:
     - opscores.proxmox_vm
   vars:
-    # Включение/отключение создания шаблонов
-    create_ubuntu24_template: true
-    create_ubuntu26_template: true
-    create_almalinux_template: true
-    create_fedora_template: true
+    recreate_templates: true
   tasks:
     - name: Create Templates
       include_role:
@@ -167,9 +161,14 @@ ansible-playbook -i inventory playbooks/clone-vm-from-template.yml --extra-vars 
 ```
 opscores.proxmox_vm/
 ├── docs/
+│   ├── README.md
+│   ├── overrides.md
+│   └── examples.md
 ├── playbooks/
 │   ├── create-vm-templates.yml
-│   └── clone-vm-from-template.yml
+│   ├── clone-vm-from-template.yml
+│   ├── clone-vm-from-template-dhcp.yml
+│   └── clone-vm-from-template-static.yml
 ├── roles/
 │   ├── create_templates/
 │   └── clone_vm/

@@ -2,18 +2,7 @@
 - name: Create Proxmox Templates from Cloud Images
   hosts: proxmox
   vars:
-    vm_memory: 4096
-    vm_cores: 2
-    vm_network_bridge: "vmbr0"
-    vm_cpu_type: "host"
-    vm_ostype: "l26"
-    vm_machine: "q35"
-    vm_bios: "seabios"
-    vm_disk_size: "12G"
-    create_ubuntu24_template: true
-    create_ubuntu26_template: true
-    create_almalinux_template: true
-    create_fedora_template: true
+    cleanup_downloaded_images: false
 
   collections:
     - opscores.proxmox_vm

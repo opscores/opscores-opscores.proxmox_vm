@@ -78,51 +78,68 @@ This role creates VM templates from cloud images. It supports Ubuntu, AlmaLinux,
 
 #### Variables
 
-- `default_templates`: List of templates to create (defined in defaults)
-- `create_ubuntu24_template`: Whether to create Ubuntu 24.04 template (default: true)
-- `create_ubuntu26_template`: Whether to create Ubuntu 26.04 template (default: true)
-- `create_almalinux_template`: Whether to create AlmaLinux template (default: true)
-- `create_fedora_template`: Whether to create Fedora template (default: true)
-- `recreate_templates`: Whether to recreate existing templates (default: false)
-- `recreate_ubuntu24_template`: Whether to recreate Ubuntu 24.04 template (default: follows recreate_templates)
-- `recreate_ubuntu26_template`: Whether to recreate Ubuntu 26.04 template (default: follows recreate_templates)
-- `recreate_almalinux_template`: Whether to recreate AlmaLinux template (default: follows recreate_templates)
-- `recreate_fedora_template`: Whether to recreate Fedora template (default: follows recreate_templates)
-- `cleanup_ubuntu24_image`: Whether to remove Ubuntu 24 image after import (default: follows cleanup_downloaded_images)
-- `cleanup_ubuntu26_image`: Whether to remove Ubuntu 26 image after import (default: follows cleanup_downloaded_images)
-- `cleanup_almalinux_image`: Whether to remove AlmaLinux image after import (default: follows cleanup_downloaded_images)
-- `cleanup_fedora_image`: Whether to remove Fedora image after import (default: follows cleanup_downloaded_images)
-- `ubuntu24_template_id`: ID for Ubuntu 24.04 template (default: 3000)
-- `ubuntu26_template_id`: ID for Ubuntu 26.04 template (default: 3004)
-- `almalinux_template_id`: ID for AlmaLinux template (default: 3001)
-- `fedora_template_id`: ID for Fedora template (default: 3002)
-- `ubuntu24_image_base_url`: Base URL for Ubuntu 24.04 cloud image
-- `ubuntu26_image_base_url`: Base URL for Ubuntu 26.04 cloud image
-- `almalinux_image_base_url`: Base URL for AlmaLinux cloud image
-- `fedora_image_base_url`: Base URL for Fedora cloud image
-- `ubuntu24_image_url`: Full URL for Ubuntu 24.04 cloud image
-- `ubuntu26_image_url`: Full URL for Ubuntu 26.04 cloud image
-- `almalinux_image_url`: Full URL for AlmaLinux cloud image
-- `fedora_image_url`: Full URL for Fedora cloud image
-- `ubuntu24_image_filename`: Filename for Ubuntu 24.04 image download
-- `ubuntu26_image_filename`: Filename for Ubuntu 26.04 image download
-- `almalinux_image_filename`: Filename for AlmaLinux image download
-- `fedora_image_filename`: Filename for Fedora image download
-- `vm_memory`: Memory size for VMs
-- `vm_cores`: Number of CPU cores for VMs
-- `vm_disk_size`: Disk size for VMs
-- `vm_network_bridge`: Network bridge for VMs
-- `ubuntu_create`: Whether to create Ubuntu template (overrides default)
-- `almalinux_create`: Whether to create AlmaLinux template (overrides default)
-- `fedora_create`: Whether to create Fedora template (overrides default)
-- `vm_memory`: Memory size for VM templates (default: 1024 MB)
-- `vm_cores`: Number of CPU cores for VM templates (default: 1)
-- `vm_network_bridge`: Network bridge for VM templates (default: "vmbr0")
-- `vm_cpu_type`: CPU type for VM templates (default: "kvm64")
-- `vm_ostype`: OS type for VM templates (default: "l26")
-- `vm_machine`: Machine type for VM templates (default: "q35")
-- `vm_bios`: BIOS type for VM templates (default: "seabios")
+**Global settings:**
+
+- `vm_storage_pool`: Proxmox storage pool (default: "vmpool")
+- `tmp_min_free_gb`: Minimum free space in /tmp in GB (default: 5)
+- `storage_min_free_gb`: Minimum free space in storage pool in GB (default: 10)
 - `cleanup_downloaded_images`: Whether to remove downloaded images after import (default: false)
+- `recreate_templates`: Whether to recreate existing templates (default: false)
+
+**VM defaults (applied to all templates unless overridden):**
+
+```yaml
+vm_defaults:
+  memory: 1024
+  cores: 1
+  disk_size: "12G"
+  network_bridge: "vmbr0"
+  cpu_type: "host"
+  ostype: "l26"
+  machine: "q35"
+  bios: "seabios"
+  scsihw: "virtio-scsi-pci"
+  agent: "enabled=1"
+```
+
+**OS templates (single source of truth):**
+
+```yaml
+os_templates:
+  ubuntu24:
+    template_id: 3000
+    vm_name: "ubuntu-24-04-template"
+    image_url: "https://mirror.yandex.ru/..."
+    image_filename: "noble-server-cloudimg-amd64.img"
+    enabled: true
+    cloud_init_template: ubuntu24
+    # Optional per-OS overrides:
+    # memory: 2048, cores: 2, disk_size: "20G", network_bridge: "vmbr1", etc.
+    # recreate: true, cleanup_image: true
+  ubuntu26:
+    template_id: 3004
+    vm_name: "ubuntu-26-04-template"
+    image_url: "https://mirror.yandex.ru/..."
+    image_filename: "resolute-server-cloudimg-amd64.img"
+    enabled: true
+    cloud_init_template: ubuntu26
+  almalinux:
+    template_id: 3001
+    vm_name: "almalinux-9-template"
+    image_url: "https://mirror.yandex.ru/..."
+    image_filename: "AlmaLinux-9-GenericCloud-9.7-20251118.x86_64.qcow2"
+    enabled: true
+    cloud_init_template: almalinux
+  fedora:
+    template_id: 3002
+    vm_name: "fedora-43-template"
+    image_url: "https://mirror.yandex.ru/..."
+    image_filename: "Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2"
+    enabled: true
+    cloud_init_template: fedora
+```
+
+See [docs/overrides.md](docs/overrides.md) for examples of overriding parameters and adding new OS.
 
 ### clone_vm
 

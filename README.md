@@ -29,15 +29,12 @@ ansible-galaxy collection install opscores.proxmox_vm
   collections:
     - opscores.proxmox_vm
   vars:
-    vm_memory: 4096
-    vm_cores: 2
-    vm_disk_size: "12G"
-    vm_network_bridge: "vmbr0"
+    vm_defaults:
+      memory: 4096
+      cores: 2
+      disk_size: "12G"
+      network_bridge: "vmbr0"
     cleanup_downloaded_images: false
-    create_ubuntu24_template: true
-    create_ubuntu26_template: true
-    create_almalinux_template: true
-    create_fedora_template: true
   tasks:
     - name: Create Templates
       include_role:
