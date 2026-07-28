@@ -19,15 +19,12 @@ all:
           dns_servers: "8.8.8.8 8.8.4.4"
           search_domains: "local"
       vars:
-        create_ubuntu24_template: false
-        create_ubuntu26_template: false
-        create_almalinux_template: true
-        create_fedora_template: true
         cleanup_downloaded_images: false
 
   vars:
     ansible_python_interpreter: /usr/bin/python3
     ansible_ssh_common_args: -o StrictHostKeyChecking=no
-    vm_memory: 4096
-    vm_cores: 2
-    vm_disk_size: "12G"
+    vm_defaults:
+      memory: 4096
+      cores: 2
+      disk_size: "12G"

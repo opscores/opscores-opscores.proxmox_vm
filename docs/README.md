@@ -2,7 +2,7 @@
 
 ## Overview
 
-This collection provides playbooks, roles, and modules for managing Proxmox virtual machines and templates. It includes functionality for creating VM templates from cloud images and cloning VMs from existing templates with cloud-init configuration.
+This collection provides playbooks and roles for managing Proxmox virtual machines and templates. It includes functionality for creating VM templates from cloud images and cloning VMs from existing templates with cloud-init configuration.
 
 ## Installation
 
@@ -24,15 +24,12 @@ To create VM templates from cloud images, use the `create-vm-templates.yml` play
   collections:
     - opscores.proxmox_vm
   vars:
-    vm_memory: 4096
-    vm_cores: 2
-    vm_disk_size: "12G"
-    vm_network_bridge: "vmbr0"
+    vm_defaults:
+      memory: 4096
+      cores: 2
+      disk_size: "12G"
+      network_bridge: "vmbr0"
     cleanup_downloaded_images: false
-    create_ubuntu24_template: true
-    create_ubuntu26_template: true
-    create_almalinux_template: true
-    create_fedora_template: true
   tasks:
     - name: Create Templates
       include_role:
@@ -81,6 +78,7 @@ This role creates VM templates from cloud images. It supports Ubuntu, AlmaLinux,
 **Global settings:**
 
 - `vm_storage_pool`: Proxmox storage pool (default: "vmpool")
+- `snippets_path`: Path to Proxmox snippets directory (default: "/var/lib/vz/snippets")
 - `tmp_min_free_gb`: Minimum free space in /tmp in GB (default: 5)
 - `storage_min_free_gb`: Minimum free space in storage pool in GB (default: 10)
 - `cleanup_downloaded_images`: Whether to remove downloaded images after import (default: false)
@@ -160,6 +158,9 @@ The role includes the following checks:
 - `storage_pool`: Storage pool to use for VM
 - `full_clone`: Whether to perform a full clone
 - `recreate_vm`: Whether to recreate the VM if it already exists (default: false)
+- `snippets_path`: Path to Proxmox snippets directory (default: "/var/lib/vz/snippets")
+- `snippets_storage`: Proxmox storage name for cloud-init snippets (default: "local")
+- `timezone`: Timezone for the cloned VM (default: "Europe/Moscow")
 - `clone_vm_memory`: Memory size for the cloned VM (overrides default)
 - `clone_vm_cores`: Number of CPU cores for the cloned VM (overrides default)
 - `clone_vm_ostype`: OS type for the cloned VM (overrides default)

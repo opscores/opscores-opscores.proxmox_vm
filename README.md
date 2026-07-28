@@ -4,11 +4,11 @@ An Ansible collection for managing Proxmox virtual machines and templates.
 
 ## Description
 
-This collection provides playbooks, roles, and modules for managing Proxmox virtual machines and templates. It includes functionality for creating VM templates from cloud images and cloning VMs from existing templates with cloud-init configuration.
+This collection provides playbooks and roles for managing Proxmox virtual machines and templates. It includes functionality for creating VM templates from cloud images and cloning VMs from existing templates with cloud-init configuration.
 
 ## Requirements
 
-- Ansible 2.13.9+
+- Ansible 2.17+
 - Proxmox VE 6.0+
 
 ## Installation
@@ -81,6 +81,7 @@ This role creates VM templates from cloud images. It supports Ubuntu, AlmaLinux,
 **Global settings:**
 
 - `vm_storage_pool`: Proxmox storage pool (default: "vmpool")
+- `snippets_path`: Path to Proxmox snippets directory (default: "/var/lib/vz/snippets")
 - `cleanup_downloaded_images`: Whether to remove downloaded images after import (default: false)
 - `recreate_templates`: Whether to recreate existing templates (default: false)
 - `tmp_min_free_gb`: Minimum free space in /tmp in GB (default: 5)
@@ -140,6 +141,9 @@ The role includes the following checks:
 - `storage_pool`: Storage pool to use for VM
 - `full_clone`: Whether to perform a full clone
 - `recreate_vm`: Whether to recreate the VM if it already exists (default: false)
+- `snippets_path`: Path to Proxmox snippets directory (default: "/var/lib/vz/snippets")
+- `snippets_storage`: Proxmox storage name for cloud-init snippets (default: "local")
+- `timezone`: Timezone for the cloned VM (default: "Europe/Moscow")
 - `clone_vm_memory`: Memory size for the cloned VM (overrides default)
 - `clone_vm_cores`: Number of CPU cores for the cloned VM (overrides default)
 - `clone_vm_ostype`: OS type for the cloned VM (overrides default)

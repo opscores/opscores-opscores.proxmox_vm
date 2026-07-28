@@ -78,10 +78,8 @@
 # Create VM existence dictionary
 - name: Create VM existence dictionary
   ansible.builtin.set_fact:
-    vm_existence_dict: >-
-      { {% for r in vm_status.results %}
-        "{{ r.item.vm_id }}": "{{ r.stdout }}"{{ "," if not loop.last else "" }}
-      {% endfor %} }
+    vm_existence_dict: "{{ vm_existence_dict | default({}) | combine({r.item.vm_id: r.stdout}) }}"
+  loop: "{{ vm_status.results }}"
 
 - name: Stop running VMs if they exist before destroying
   ansible.builtin.shell:
@@ -202,9 +200,7 @@
   async: 1200
   poll: 15
   register: import_result
-  failed_when:
-    - import_result.rc != 0
-    - "'already exists' not in import_result.stderr"
+  failed_when: import_result.rc != 0 and "'already exists' not in import_result.stderr"
   changed_when: "'importing' in import_result.stdout"
 
 - name: Fail if any import failed
