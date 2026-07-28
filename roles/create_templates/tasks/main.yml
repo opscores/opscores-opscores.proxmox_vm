@@ -32,6 +32,22 @@
       cleanup_image: "{{ item.value.cleanup_image | default(cleanup_downloaded_images) }}"
 
 # Preflight checks
+- name: "Preflight — detect Proxmox VE major version"
+  ansible.builtin.shell:
+    cmd: "pveversion | grep -oP 'pve-manager/\\K[0-9]+' || echo unknown"
+  register: pve_major_version
+  changed_when: false
+
+- name: "Preflight — warn if Proxmox VE major version is not the tested target (9.x)"
+  ansible.builtin.debug:
+    msg: >
+      WARNING: detected Proxmox VE major version '{{ pve_major_version.stdout }}'.
+      This collection is developed and tested against Proxmox VE 9.x. It only uses
+      generic `qm`/`pvesm` CLI commands with no version-specific flags, so other
+      versions may work, but have not been verified. Proceeding anyway.
+  when: pve_major_version.stdout != "9"
+
+# Preflight checks — free space
 - name: Preflight — check free space in /tmp for image downloads
   ansible.builtin.shell:
     cmd: "df --output=avail -BG /tmp | tail -1 | sed 's/G//'"
@@ -50,7 +66,7 @@
   ansible.builtin.shell:
     cmd: "pvesm status | awk -v pool='{{ vm_storage_pool }}' '$1 == pool {print $6}'"
   register: storage_free
-  failed_when: (storage_free.stdout | int / 1073741824) | int < storage_min_free_gb
+  failed_when: (storage_free.stdout | int / 1048576) | int < storage_min_free_gb
   changed_when: false
 
 - name: Check snippets directory exists
@@ -137,6 +153,11 @@
   changed_when: false
   ignore_errors: yes
 
+- name: Fail fast if VM creation did not produce a config file
+  ansible.builtin.fail:
+    msg: "qm create did not produce a config file for: {{ vm_conf_check.results | selectattr('failed', 'true') | map(attribute='item.name') | list }}"
+  when: vm_conf_check.results is defined and vm_conf_check.results | selectattr('failed', 'true') | list | length > 0
+
 - name: Debug CPU configuration
   ansible.builtin.shell:
     cmd: "qm config {{ item.vm_id }} | grep -i cpu || true"
@@ -200,7 +221,7 @@
   async: 1200
   poll: 15
   register: import_result
-  failed_when: import_result.rc != 0 and "'already exists' not in import_result.stderr"
+  failed_when: import_result.rc != 0 and 'already exists' not in import_result.stderr
   changed_when: "'importing' in import_result.stdout"
 
 - name: Fail if any import failed

@@ -171,7 +171,7 @@ users:
       - {{ ssh_public_key }}
 
 ssh_pwauth: true
-disable_root: false
+disable_root: true
 
 bootcmd:
   - [systemd-machine-id-setup]

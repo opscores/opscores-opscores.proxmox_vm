@@ -9,7 +9,9 @@ This collection provides playbooks and roles for managing Proxmox virtual machin
 ## Requirements
 
 - Ansible 2.17+
-- Proxmox VE 6.0+
+- Proxmox VE 9.x (developed and tested against). The collection only uses generic
+  `qm`/`pvesm` CLI commands with no version-specific flags, so other Proxmox VE
+  versions may work, but have not been verified.
 
 ## Installation
 

@@ -42,7 +42,10 @@ users:
 
 # Безопасность
 ssh_pwauth: true
-disable_root: false
+# disable_root: true blocks root SSH login declaratively at the cloud-init level
+# (independent of the base image's sshd_config defaults). Kept consistent with the
+# Ubuntu templates; does not affect cloud_user or its password/ssh_pwauth settings.
+disable_root: true
 
 # Команды при загрузке
 bootcmd:
