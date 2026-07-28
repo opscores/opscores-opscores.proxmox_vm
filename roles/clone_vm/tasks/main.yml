@@ -120,7 +120,21 @@
 # Cloud-init
 # ============================================================
 
-# 12. Generate cloud-init user data from template
+# 12. Validate cloud-init template exists for os_type
+- name: "Validate cloud-init template exists for os_type"
+  ansible.builtin.stat:
+    path: "{{ role_path }}/templates/cloud-init-{{ os_type }}.yaml.j2"
+  register: ci_template_stat
+
+- name: "Fail if cloud-init template not found"
+  ansible.builtin.fail:
+    msg: >
+      Cloud-init template for os_type='{{ os_type }}' not found.
+      Available: {{ lookup('fileglob', role_path ~ '/templates/cloud-init-*.yaml.j2', wantlist=True)
+                    | map('basename') | map('regex_replace', '^cloud-init-|\.yaml\.j2$', '') | list }}
+  when: not ci_template_stat.stat.exists
+
+# 13. Generate cloud-init user data from template
 - name: "Generate complete cloud-init user data from template"
   ansible.builtin.template:
     src: "templates/cloud-init-{{ os_type }}.yaml.j2"

@@ -1,14 +1,31 @@
 ---
 # tasks file for create_templates role
-- name: Initialize active_templates list
-  ansible.builtin.set_fact:
-    active_templates: []
 
-- name: Filter active templates based on inventory variables and enabled status
+- name: Build active_templates from os_templates
   ansible.builtin.set_fact:
-    active_templates: "{{ active_templates + [item] }}"
-  loop: "{{ default_templates }}"
-  when: item.enabled | bool and (lookup('vars', item.name ~ '_create', default=true) | bool)
+    active_templates: >-
+      [{% for name, t in os_templates.items() %}
+        {% if t.enabled | bool %}
+        {
+          "name": "{{ name }}",
+          "vm_id": {{ t.template_id }},
+          "vm_name": "{{ t.vm_name }}",
+          "image_url": "{{ t.image_url }}",
+          "image_filename": "{{ t.image_filename }}",
+          "ostype": "{{ t.ostype | default(vm_defaults.ostype) }}",
+          "machine": "{{ t.machine | default(vm_defaults.machine) }}",
+          "bios": "{{ t.bios | default(vm_defaults.bios) }}",
+          "cpu_type": "{{ t.cpu_type | default(vm_defaults.cpu_type) }}",
+          "vm_memory": "{{ t.memory | default(vm_defaults.memory) }}",
+          "vm_cores": "{{ t.cores | default(vm_defaults.cores) }}",
+          "vm_disk_size": "{{ t.disk_size | default(vm_defaults.disk_size) }}",
+          "vm_network_bridge": "{{ t.network_bridge | default(vm_defaults.network_bridge) }}",
+          "enabled": true,
+          "recreate": {{ t.recreate | default(recreate_templates) }},
+          "cleanup_image": {{ t.cleanup_image | default(cleanup_downloaded_images) }}
+        }{% if not loop.last %},{% endif %}
+        {% endif %}
+      {% endfor %}]
 
 # Preflight checks
 - name: Preflight — check free space in /tmp for image downloads

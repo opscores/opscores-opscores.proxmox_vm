@@ -1,117 +1,52 @@
 # defaults/main.yml
-create_ubuntu24_template: true
-create_ubuntu26_template: true
-create_almalinux_template: true
-create_fedora_template: true
 
 vm_storage_pool: "vmpool"
-cleanup_downloaded_images: false
-
-recreate_templates: false
-recreate_ubuntu24_template: "{{ recreate_templates }}"
-recreate_ubuntu26_template: "{{ recreate_templates }}"
-recreate_almalinux_template: "{{ recreate_templates }}"
-recreate_fedora_template: "{{ recreate_templates }}"
-
-cleanup_ubuntu24_image: "{{ cleanup_downloaded_images }}"
-cleanup_ubuntu26_image: "{{ cleanup_downloaded_images }}"
-cleanup_almalinux_image: "{{ cleanup_downloaded_images }}"
-cleanup_fedora_image: "{{ cleanup_downloaded_images }}"
-
 tmp_min_free_gb: 5
 storage_min_free_gb: 10
+cleanup_downloaded_images: false
+recreate_templates: false
 
-vm_memory: 1024
-vm_cores: 1
-vm_disk_size: "12G"
-vm_network_bridge: "vmbr0"
-vm_cpu_type: "host"
-vm_ostype: "l26"
-vm_machine: "q35"
-vm_bios: "seabios"
+vm_defaults:
+  memory: 1024
+  cores: 1
+  disk_size: "12G"
+  network_bridge: "vmbr0"
+  cpu_type: "host"
+  ostype: "l26"
+  machine: "q35"
+  bios: "seabios"
+  scsihw: "virtio-scsi-pci"
+  agent: "enabled=1"
 
-ubuntu24_template_id: 3000
-ubuntu26_template_id: 3004
-almalinux_template_id: 3001
-fedora_template_id: 3002
-
-ubuntu24_image_base_url: "https://mirror.yandex.ru/ubuntu-cloud-images/noble/current"
-ubuntu24_image_filename: "noble-server-cloudimg-amd64.img"
-ubuntu24_image_url: "{{ ubuntu24_image_base_url }}/{{ ubuntu24_image_filename }}"
-
-ubuntu26_image_base_url: "https://mirror.yandex.ru/ubuntu-cloud-images/resolute/current"
-ubuntu26_image_filename: "resolute-server-cloudimg-amd64.img"
-ubuntu26_image_url: "{{ ubuntu26_image_base_url }}/{{ ubuntu26_image_filename }}"
-
-almalinux_image_base_url: "https://mirror.yandex.ru/almalinux/9.7/cloud/x86_64/images"
-almalinux_image_filename: "AlmaLinux-9-GenericCloud-9.7-20251118.x86_64.qcow2"
-almalinux_image_url: "{{ almalinux_image_base_url }}/{{ almalinux_image_filename }}"
-
-fedora_image_base_url: "https://mirror.yandex.ru/fedora/linux/releases/43/Cloud/x86_64/images"
-fedora_image_filename: "Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2"
-fedora_image_url: "{{ fedora_image_base_url }}/{{ fedora_image_filename }}"
-
-default_templates:
-  - name: "ubuntu24"
-    vm_id: "{{ ubuntu24_template_id }}"
+os_templates:
+  ubuntu24:
+    template_id: 3000
     vm_name: "ubuntu-24-04-template"
-    image_url: "{{ ubuntu24_image_url }}"
-    image_filename: "{{ ubuntu24_image_filename }}"
-    ostype: "{{ vm_ostype }}"
-    machine: "{{ vm_machine }}"
-    bios: "{{ vm_bios }}"
-    cpu_type: "{{ vm_cpu_type }}"
-    vm_memory: "{{ vm_memory }}"
-    vm_cores: "{{ vm_cores }}"
-    vm_network_bridge: "{{ vm_network_bridge }}"
-    enabled: "{{ create_ubuntu24_template }}"
-    recreate: "{{ recreate_ubuntu24_template }}"
-    cleanup_image: "{{ cleanup_ubuntu24_image }}"
+    image_url: "https://mirror.yandex.ru/ubuntu-cloud-images/noble/current/noble-server-cloudimg-amd64.img"
+    image_filename: "noble-server-cloudimg-amd64.img"
+    enabled: true
+    cloud_init_template: ubuntu24
 
-  - name: "ubuntu26"
-    vm_id: "{{ ubuntu26_template_id }}"
+  ubuntu26:
+    template_id: 3004
     vm_name: "ubuntu-26-04-template"
-    image_url: "{{ ubuntu26_image_url }}"
-    image_filename: "{{ ubuntu26_image_filename }}"
-    ostype: "{{ vm_ostype }}"
-    machine: "{{ vm_machine }}"
-    bios: "{{ vm_bios }}"
-    cpu_type: "{{ vm_cpu_type }}"
-    vm_memory: "{{ vm_memory }}"
-    vm_cores: "{{ vm_cores }}"
-    vm_network_bridge: "{{ vm_network_bridge }}"
-    enabled: "{{ create_ubuntu26_template }}"
-    recreate: "{{ recreate_ubuntu26_template }}"
-    cleanup_image: "{{ cleanup_ubuntu26_image }}"
+    image_url: "https://mirror.yandex.ru/ubuntu-cloud-images/resolute/current/resolute-server-cloudimg-amd64.img"
+    image_filename: "resolute-server-cloudimg-amd64.img"
+    enabled: true
+    cloud_init_template: ubuntu26
 
-  - name: "almalinux"
-    vm_id: "{{ almalinux_template_id }}"
+  almalinux:
+    template_id: 3001
     vm_name: "almalinux-9-template"
-    image_url: "{{ almalinux_image_url }}"
-    image_filename: "{{ almalinux_image_filename }}"
-    ostype: "{{ vm_ostype }}"
-    machine: "{{ vm_machine }}"
-    bios: "{{ vm_bios }}"
-    cpu_type: "{{ vm_cpu_type }}"
-    vm_memory: "{{ vm_memory }}"
-    vm_cores: "{{ vm_cores }}"
-    vm_network_bridge: "{{ vm_network_bridge }}"
-    enabled: "{{ create_almalinux_template }}"
-    recreate: "{{ recreate_almalinux_template }}"
-    cleanup_image: "{{ cleanup_almalinux_image }}"
+    image_url: "https://mirror.yandex.ru/almalinux/9.7/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.7-20251118.x86_64.qcow2"
+    image_filename: "AlmaLinux-9-GenericCloud-9.7-20251118.x86_64.qcow2"
+    enabled: true
+    cloud_init_template: almalinux
 
-  - name: "fedora"
-    vm_id: "{{ fedora_template_id }}"
+  fedora:
+    template_id: 3002
     vm_name: "fedora-43-template"
-    image_url: "{{ fedora_image_url }}"
-    image_filename: "{{ fedora_image_filename }}"
-    ostype: "{{ vm_ostype }}"
-    machine: "{{ vm_machine }}"
-    bios: "{{ vm_bios }}"
-    cpu_type: "{{ vm_cpu_type }}"
-    vm_memory: "{{ vm_memory }}"
-    vm_cores: "{{ vm_cores }}"
-    vm_network_bridge: "{{ vm_network_bridge }}"
-    enabled: "{{ create_fedora_template }}"
-    recreate: "{{ recreate_fedora_template }}"
-    cleanup_image: "{{ cleanup_fedora_image }}"
+    image_url: "https://mirror.yandex.ru/fedora/linux/releases/43/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2"
+    image_filename: "Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2"
+    enabled: true
+    cloud_init_template: fedora
