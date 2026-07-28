@@ -52,6 +52,7 @@ runcmd:
   - [timedatectl, set-timezone, "{{ timezone | default('Europe/Moscow') }}"]
   - [systemctl, enable, qemu-guest-agent]
   - [systemctl, start, qemu-guest-agent]
+  - [systemctl, enable, --now, snapd]
   - [snap, install, certbot, --classic]
   - [apt-get, install, -y, software-properties-common]
   - [add-apt-repository, -y, universe]

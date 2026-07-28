@@ -199,6 +199,12 @@
   async: 1200
   poll: 15
   register: import_jobs
+  failed_when: import_jobs.rc != 0
+
+- name: Fail if any import failed
+  ansible.builtin.fail:
+    msg: "Import failed for: {{ import_jobs.results | selectattr('failed', 'true') | map(attribute='item.name') | list }}"
+  when: import_jobs.results is defined and import_jobs.results | selectattr('failed', 'true') | list | length > 0
 
 - name: Show final import status
   ansible.builtin.debug:

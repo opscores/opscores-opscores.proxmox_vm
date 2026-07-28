@@ -1,0 +1,3 @@
+# Python dependencies for opscores.proxmox_vm collection
+# Required for cloud-init template rendering (password_hash filter)
+python3-passlib

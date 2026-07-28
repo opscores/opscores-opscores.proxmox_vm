@@ -29,6 +29,14 @@
   changed_when: false
   failed_when: false
 
+# 4. Verify local storage has snippets content type
+- name: "Verify local storage supports snippets"
+  ansible.builtin.shell:
+    cmd: "pvesm status | grep -q '^local ' && grep -q 'snippets' /etc/pve/storage.cfg || echo 'missing'"
+  register: snippets_check
+  changed_when: false
+  failed_when: snippets_check.stdout == "missing"
+
 # ============================================================
 # Remove existing VM (recreate)
 # ============================================================
@@ -134,12 +142,23 @@
                     | map('basename') | map('regex_replace', '^cloud-init-|\.yaml\.j2$', '') | list }}
   when: not ci_template_stat.stat.exists
 
+# 12a. Validate static IP configuration
+- name: "Fail if static IP configured without required addresses"
+  ansible.builtin.fail:
+    msg: >
+      use_dhcp_ip is false but static_ip_address or static_gateway is empty.
+      Set static_ip_address='{{ static_ip_address }}' and static_gateway='{{ static_gateway }}'
+      or enable use_dhcp_ip=true.
+  when: >
+    not (use_dhcp_ip | default(true) | bool) and
+    (static_ip_address == "" or static_gateway == "")
+
 # 13. Generate cloud-init user data from template
 - name: "Generate complete cloud-init user data from template"
   ansible.builtin.template:
     src: "templates/cloud-init-{{ os_type }}.yaml.j2"
     dest: "/var/lib/vz/snippets/ci-{{ new_vm_id }}.yaml"
-    mode: '0644'
+    mode: '0600'
   when: vm_config_exists.rc != 0 or recreate_vm | bool
 
 # 13. Configure cloud-init (DHCP)
