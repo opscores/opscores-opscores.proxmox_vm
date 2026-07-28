@@ -52,6 +52,62 @@ os_templates:
     cores: 4
 ```
 
+## Per-OS recreate и cleanup
+
+По умолчанию флаги `recreate_templates` и `cleanup_downloaded_images` применяются глобально ко всем ОС. Можно переопределить для конкретной ОС:
+
+### Включить recreate только для Fedora
+
+```yaml
+# group_vars/proxmox.yml
+recreate_templates: false  # глобально выключено
+
+os_templates:
+  fedora:
+    recreate: true  # только Fedora будет пересоздаваться
+```
+
+### Включить cleanup только для Ubuntu 24
+
+```yaml
+# group_vars/proxmox.yml
+cleanup_downloaded_images: false  # глобально выключено
+
+os_templates:
+  ubuntu24:
+    cleanup_image: true  # только для Ubuntu 24 удалять образ после импорта
+```
+
+### Полный пример с per-OS настройками
+
+```yaml
+# group_vars/proxmox.yml
+recreate_templates: false
+cleanup_downloaded_images: false
+
+os_templates:
+  ubuntu24:
+    enabled: true
+    template_id: 3000
+    recreate: false
+    cleanup_image: true
+  ubuntu26:
+    enabled: true
+    template_id: 3004
+    recreate: false
+    cleanup_image: false
+  almalinux:
+    enabled: true
+    template_id: 3001
+    recreate: true      # пересоздавать при каждом запуске
+    cleanup_image: true  # удалять образ после импорта
+  fedora:
+    enabled: true
+    template_id: 3002
+    recreate: false
+    cleanup_image: false
+```
+
 ## Добавление новой ОС
 
 1. Добавьте запись в `os_templates` в `defaults/main.yml`
@@ -71,12 +127,29 @@ os_templates:
     image_filename: "debian-12-genericcloud-amd64.qcow2"
     enabled: true
     cloud_init_template: debian12
+    recreate: false
+    cleanup_image: false
 ```
 
 ```yaml
 # clone_vm/templates/cloud-init-debian12.yaml.j2
-{% include '_common.yaml.j2' %}
+#cloud-config
+# Debian 12-specific cloud-init configuration
 
+hostname: "{{ new_vm_name }}"
+manage_etc_hosts: false
+preserve_hostname: false
+
+timezone: "{{ timezone | default('Europe/Moscow') }}"
+locale: en_US.UTF-8
+
+resize_rootfs: true
+growpart:
+  mode: auto
+  devices: ['/']
+
+package_update: false
+package_upgrade: false
 packages:
   - qemu-guest-agent
   - curl
@@ -86,9 +159,34 @@ packages:
   - sudo
   - openssh-server
 
+users:
+  - name: {{ cloud_user }}
+    primary_group: {{ cloud_user }}
+    groups: [sudo, adm, systemd-journal]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/bash
+    lock_passwd: false
+    passwd: "{{ cloud_password | password_hash('sha512') }}"
+    ssh_authorized_keys:
+      - {{ ssh_public_key }}
+
+ssh_pwauth: true
+disable_root: false
+
+bootcmd:
+  - [systemd-machine-id-setup]
+
 runcmd:
+  - [hostnamectl, set-hostname, "{{ new_vm_name }}"]
+  - [timedatectl, set-timezone, "{{ timezone | default('Europe/Moscow') }}"]
+  - [systemctl, enable, qemu-guest-agent]
+  - [systemctl, start, qemu-guest-agent]
+  - [sed, -i, 's/^#?PubkeyAuthentication.*/PubkeyAuthentication yes/', /etc/ssh/sshd_config]
   - [sed, -i, 's/#PermitRootLogin.*/PermitRootLogin no/', /etc/ssh/sshd_config]
   - [systemctl, restart, sshd]
+  - [chown, -R, '{{ cloud_user }}:{{ cloud_user }}', '/home/{{ cloud_user }}/.ssh']
+  - ['chmod', '700', '/home/{{ cloud_user }}/.ssh']
+  - ['chmod', '600', '/home/{{ cloud_user }}/.ssh/authorized_keys']
 
 final_message: "Debian 12 cloud-init completed at $UPTIME"
 ```
