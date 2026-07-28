@@ -204,3 +204,48 @@ final_message: "Debian 12 cloud-init completed at $UPTIME"
   roles:
     - clone_vm
 ```
+
+## Обязательные переменные clone_vm
+
+При использовании роли `clone_vm` необходимо определить следующие переменные в playbook или inventory:
+
+### Параметры VM (обязательные)
+| Переменная | Описание | Пример |
+|---|---|---|
+| `source_vm_id` | ID шаблона-источника | `3000` |
+| `new_vm_id` | ID новой VM | `8001` |
+| `new_vm_name` | Hostname новой VM | `"test-vm"` |
+| `os_type` | Тип ОС (должен совпадать с cloud-init шаблоном) | `"ubuntu24"` |
+| `target_node` | Целевой Proxmox узел | `"pve-node"` |
+| `storage_pool` | Хранилище для диска | `"vmpool"` |
+| `full_clone` | Полное клонирование | `true` |
+
+### Cloud-init параметры (обязательные)
+| Переменная | Описание | Пример |
+|---|---|---|
+| `cloud_user` | Имя пользователя cloud-init | `"ansible"` |
+| `cloud_password` | Пароль (используйте ansible-vault!) | `"{{ vault_cloud_password }}"` |
+| `ssh_public_key` | SSH публичный ключ | `"{{ lookup('file', '~/.ssh/id_rsa.pub') }}"` |
+| `timezone` | Часовой пояс | `"Europe/Moscow"` |
+
+### Пример playbook
+
+```yaml
+# playbooks/clone_vm.yml
+- hosts: proxmox
+  vars:
+    source_vm_id: 3000
+    new_vm_id: 8001
+    new_vm_name: "test-ubuntu24"
+    os_type: "ubuntu24"
+    target_node: "pve-node"
+    storage_pool: "vmpool"
+    full_clone: true
+    cloud_user: "ansible"
+    cloud_password: "{{ vault_cloud_password }}"
+    ssh_public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+  roles:
+    - clone_vm
+```
+
+**Важно:** `cloud_password` должен быть зашифрован через `ansible-vault`. Никогда не храните пароли в открытом виде.

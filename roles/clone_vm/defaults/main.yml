@@ -24,3 +24,18 @@ use_dhcp_ip: true
 static_ip_address: ""
 static_subnet_mask: "24"
 static_gateway: ""
+
+# Cloud-init required variables (must be set in playbook/inventory)
+cloud_user: ""
+cloud_password: ""
+ssh_public_key: ""
+timezone: "Europe/Moscow"
+
+# Cloning required variables (must be set in playbook/inventory)
+# source_vm_id: 3000
+# new_vm_id: 8001
+# new_vm_name: "test-vm"
+# os_type: "ubuntu24"
+# target_node: "pve-node"
+# storage_pool: "vmpool"
+# full_clone: true

@@ -29,13 +29,43 @@
   changed_when: false
   failed_when: false
 
-# 4. Verify local storage has snippets content type
+# 4. Verify local storage has snippets content type (precise check)
 - name: "Verify local storage supports snippets"
   ansible.builtin.shell:
-    cmd: "pvesm status | grep -q '^local ' && grep -q 'snippets' /etc/pve/storage.cfg || echo 'missing'"
+    cmd: |
+      awk '
+        /^local:/ { in_local=1 }
+        /^[^ ]/ && !/^local:/ { in_local=0 }
+        in_local && /content.*snippets/ { found=1 }
+        END { exit (found ? 0 : 1) }
+      ' /etc/pve/storage.cfg
   register: snippets_check
   changed_when: false
-  failed_when: snippets_check.stdout == "missing"
+  failed_when: snippets_check.rc != 0
+
+# 5. Validate required variables for clone_vm
+- name: "Validate required variables are defined"
+  ansible.builtin.assert:
+    that:
+      - source_vm_id is defined
+      - new_vm_id is defined
+      - new_vm_name is defined
+      - os_type is defined
+      - target_node is defined
+      - storage_pool is defined
+      - full_clone is defined
+      - cloud_user is defined
+      - cloud_password is defined
+      - ssh_public_key is defined
+    fail_msg: >
+      Missing required variable(s). Required: source_vm_id, new_vm_id, new_vm_name,
+      os_type, target_node, storage_pool, full_clone, cloud_user, cloud_password, ssh_public_key
+      Current values: source_vm_id={{ source_vm_id | default('UNDEFINED') }},
+      new_vm_id={{ new_vm_id | default('UNDEFINED') }}, new_vm_name={{ new_vm_name | default('UNDEFINED') }},
+      os_type={{ os_type | default('UNDEFINED') }}, target_node={{ target_node | default('UNDEFINED') }},
+      storage_pool={{ storage_pool | default('UNDEFINED') }}, full_clone={{ full_clone | default('UNDEFINED') }},
+      cloud_user={{ cloud_user | default('UNDEFINED') }}, cloud_password={{ cloud_password | default('UNDEFINED') }},
+      ssh_public_key={{ ssh_public_key | default('UNDEFINED') }}
 
 # ============================================================
 # Remove existing VM (recreate)
