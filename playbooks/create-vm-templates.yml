@@ -1,6 +1,7 @@
 ---
 - name: Create Proxmox Templates from Cloud Images
   hosts: proxmox
+  serial: 1
   vars:
     cleanup_downloaded_images: false
 

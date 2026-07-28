@@ -1,6 +1,7 @@
 ---
 - name: Clone VM from Template with DHCP
   hosts: proxmox
+  serial: 1
   collections:
     - opscores.proxmox_vm
 

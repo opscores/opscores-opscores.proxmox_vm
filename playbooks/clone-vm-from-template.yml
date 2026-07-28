@@ -1,6 +1,7 @@
 ---
 - name: Clone and Configure VM from Template
   hosts: proxmox
+  serial: 1
   vars:
     # Source template configuration
     source_vm_id: 3001      # Source template ID (3000=Ubuntu24, 3004=Ubuntu26, 3001=AlmaLinux, 3002=Fedora)

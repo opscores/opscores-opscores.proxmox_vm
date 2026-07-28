@@ -24,12 +24,12 @@
       vm_memory: "{{ item.value.memory | default(vm_defaults.memory) }}"
       vm_cores: "{{ item.value.cores | default(vm_defaults.cores) }}"
       vm_disk_size: "{{ item.value.disk_size | default(vm_defaults.disk_size) }}"
-       vm_network_bridge: "{{ item.value.network_bridge | default(vm_defaults.network_bridge) }}"
-       scsihw: "{{ item.value.scsihw | default(vm_defaults.scsihw) }}"
-       agent: "{{ item.value.agent | default(vm_defaults.agent) }}"
-       enabled: true
-       recreate: "{{ item.value.recreate | default(recreate_templates) }}"
-       cleanup_image: "{{ item.value.cleanup_image | default(cleanup_downloaded_images) }}"
+      vm_network_bridge: "{{ item.value.network_bridge | default(vm_defaults.network_bridge) }}"
+      scsihw: "{{ item.value.scsihw | default(vm_defaults.scsihw) }}"
+      agent: "{{ item.value.agent | default(vm_defaults.agent) }}"
+      enabled: true
+      recreate: "{{ item.value.recreate | default(recreate_templates) }}"
+      cleanup_image: "{{ item.value.cleanup_image | default(cleanup_downloaded_images) }}"
 
 # Preflight checks
 - name: Preflight — check free space in /tmp for image downloads
@@ -55,12 +55,12 @@
 
 - name: Check snippets directory exists
   ansible.builtin.stat:
-    path: "/var/lib/vz/snippets"
+    path: "{{ snippets_path }}"
   register: snippets_dir
 
 - name: Create snippets directory if it doesn't exist
   ansible.builtin.file:
-    path: "/var/lib/vz/snippets"
+    path: "{{ snippets_path }}"
     state: directory
     owner: root
     group: root
@@ -91,6 +91,10 @@
     - vm_existence_dict[item.vm_id] == "exists"
     - item.recreate | bool
   ignore_errors: yes
+  register: stop_result
+  until: stop_result.rc == 0
+  retries: 3
+  delay: 10
 
 - name: Destroy existing VMs/Templates if they exist and recreate is true
   ansible.builtin.shell:
@@ -188,30 +192,30 @@
   ansible.builtin.debug:
     var: storage_check.stdout
 
-# Import with progress monitoring
-- name: Import cloud images with progress monitoring
+# Import cloud images
+- name: Import cloud images
   ansible.builtin.shell:
-    cmd: |
-      echo "[IMPORT START] {{ item.name }} ({{ item.vm_id }}) at $(date)"
-      qm importdisk {{ item.vm_id }} "/tmp/{{ item.image_filename }}" "{{ vm_storage_pool }}" --format qcow2
-      echo "[IMPORT DONE] {{ item.name }} at $(date)"
+    cmd: "qm importdisk {{ item.vm_id }} /tmp/{{ item.image_filename }} {{ vm_storage_pool }} --format qcow2"
   loop: "{{ active_templates }}"
   when:
     - (vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool) and cloud_images_dict[item.name].stat.exists
   async: 1200
   poll: 15
-  register: import_jobs
-  failed_when: import_jobs.rc != 0
+  register: import_result
+  failed_when:
+    - import_result.rc != 0
+    - "'already exists' not in import_result.stderr"
+  changed_when: "'importing' in import_result.stdout"
 
 - name: Fail if any import failed
   ansible.builtin.fail:
-    msg: "Import failed for: {{ import_jobs.results | selectattr('failed', 'true') | map(attribute='item.name') | list }}"
-  when: import_jobs.results is defined and import_jobs.results | selectattr('failed', 'true') | list | length > 0
+    msg: "Import failed for: {{ import_result.results | selectattr('failed', 'true') | map(attribute='item.name') | list }}"
+  when: import_result.results is defined and import_result.results | selectattr('failed', 'true') | list | length > 0
 
 - name: Show final import status
   ansible.builtin.debug:
     msg: "Import {{ 'completed' if not item.failed else 'failed' }} for {{ item.item.name }}"
-  loop: "{{ import_jobs.results }}"
+  loop: "{{ import_result.results }}"
   when:
     - (vm_existence_dict[item.item.vm_id] == "not_exists" or item.item.recreate | bool) and cloud_images_dict[item.item.name].stat.exists
 
@@ -224,6 +228,10 @@
       --boot order=scsi0
   loop: "{{ active_templates }}"
   when: vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
+  register: set_disk_result
+  until: set_disk_result.rc == 0
+  retries: 3
+  delay: 10
 
 # 2. Attach cloud-init CD-ROM
 - name: Add cloud-init drive
@@ -231,6 +239,10 @@
     cmd: "qm set {{ item.vm_id }} --ide2 {{ vm_storage_pool }}:cloudinit"
   loop: "{{ active_templates }}"
   when: vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
+  register: set_ci_drive_result
+  until: set_ci_drive_result.rc == 0
+  retries: 3
+  delay: 10
 
 # 3. Attach network interface
 - name: Add network interface to VM
@@ -238,6 +250,10 @@
     cmd: "qm set {{ item.vm_id }} --net0 virtio,bridge={{ item.vm_network_bridge }}"
   loop: "{{ active_templates }}"
   when: vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
+  register: set_net_result
+  until: set_net_result.rc == 0
+  retries: 3
+  delay: 10
 
 # 4. DHCP as network fallback
 - name: Set default Cloud-Init network config (DHCP fallback)
@@ -245,6 +261,10 @@
     cmd: "qm set {{ item.vm_id }} --ipconfig0 ip=dhcp"
   loop: "{{ active_templates }}"
   when: vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
+  register: set_ip_result
+  until: set_ip_result.rc == 0
+  retries: 3
+  delay: 10
 
 # 5. Convert to template
 - name: Convert VMs to templates
@@ -252,6 +272,10 @@
     cmd: "qm template {{ item.vm_id }}"
   loop: "{{ active_templates }}"
   when: vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
+  register: template_result
+  until: template_result.rc == 0
+  retries: 3
+  delay: 10
 
 # 6. Cleanup downloaded images (optional)
 - name: Cleanup downloaded images

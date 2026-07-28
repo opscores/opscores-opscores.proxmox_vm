@@ -1,5 +1,6 @@
 # defaults/main.yml
 
+snippets_path: "/var/lib/vz/snippets"
 vm_storage_pool: "vmpool"
 tmp_min_free_gb: 5
 storage_min_free_gb: 10
