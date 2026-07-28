@@ -5,10 +5,7 @@
   vars:
     cleanup_downloaded_images: false
 
-  collections:
-    - opscores.proxmox_vm
-
   tasks:
     - name: Create Templates
-      include_role:
-        name: create_templates
+      ansible.builtin.include_role:
+        name: opscores.proxmox_vm.create_templates

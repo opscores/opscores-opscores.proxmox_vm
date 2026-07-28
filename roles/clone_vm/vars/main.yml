@@ -23,5 +23,3 @@
 # static_ip_address: "192.168.1.100"  # Статический IP-адрес
 # static_subnet_mask: "24"  # Маска подсети
 # static_gateway: "192.168.1.1"  # Статический шлюз
-
-

@@ -19,10 +19,7 @@
     storage_pool: "{{ vm_storage_pool }}"
     full_clone: true
 
-  collections:
-    - opscores.proxmox_vm
-
   tasks:
     - name: Clone VM
-      include_role:
-        name: clone_vm
+      ansible.builtin.include_role:
+        name: opscores.proxmox_vm.clone_vm

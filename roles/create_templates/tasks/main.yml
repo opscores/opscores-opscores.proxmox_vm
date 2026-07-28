@@ -1,13 +1,13 @@
 ---
 # tasks file for create_templates role
 
-- name: Initialize active_templates list
+- name: Initialize ct_active_templates list
   ansible.builtin.set_fact:
-    active_templates: []
+    ct_active_templates: []
 
-- name: Build active_templates from enabled os_templates
+- name: Build ct_active_templates from enabled os_templates
   ansible.builtin.set_fact:
-    active_templates: "{{ active_templates + [built_template] }}"
+    ct_active_templates: "{{ ct_active_templates + [built_template] }}"
   loop: "{{ os_templates | dict2items }}"
   when: item.value.enabled | bool
   vars:
@@ -34,45 +34,45 @@
 # Preflight checks
 - name: "Preflight — detect Proxmox VE major version"
   ansible.builtin.shell:
-    cmd: "pveversion | grep -oP 'pve-manager/\\K[0-9]+' || echo unknown"
-  register: pve_major_version
+    cmd: "set -o pipefail; pveversion | grep -oP 'pve-manager/\\K[0-9]+' || echo unknown"
+  register: ct_pve_version
   changed_when: false
 
 - name: "Preflight — warn if Proxmox VE major version is not the tested target (9.x)"
   ansible.builtin.debug:
     msg: >
-      WARNING: detected Proxmox VE major version '{{ pve_major_version.stdout }}'.
+      WARNING: detected Proxmox VE major version '{{ ct_pve_version.stdout }}'.
       This collection is developed and tested against Proxmox VE 9.x. It only uses
       generic `qm`/`pvesm` CLI commands with no version-specific flags, so other
       versions may work, but have not been verified. Proceeding anyway.
-  when: pve_major_version.stdout != "9"
+  when: ct_pve_version.stdout != "9"
 
 # Preflight checks — free space
 - name: Preflight — check free space in /tmp for image downloads
   ansible.builtin.shell:
-    cmd: "df --output=avail -BG /tmp | tail -1 | sed 's/G//'"
-  register: tmp_free
-  failed_when: tmp_free.stdout | int < tmp_min_free_gb
+    cmd: "set -o pipefail; df --output=avail -BG /tmp | tail -1 | sed 's/G//'"
+  register: ct_tmp_free
+  failed_when: ct_tmp_free.stdout | int < tmp_min_free_gb
   changed_when: false
 
-- name: Preflight — verify storage pool {{ vm_storage_pool }} exists and active
+- name: Preflight — verify storage pool exists and active ({{ vm_storage_pool }})
   ansible.builtin.shell:
-    cmd: "pvesm status | awk -v pool='{{ vm_storage_pool }}' '$1 == pool && $2 == \"active\" {print $0}'"
-  register: storage_active
-  failed_when: storage_active.stdout == ""
+    cmd: "set -o pipefail; pvesm status | awk -v pool='{{ vm_storage_pool }}' '$1 == pool && $2 == \"active\" {print $0}'"
+  register: ct_storage_active
+  failed_when: ct_storage_active.stdout == ""
   changed_when: false
 
 - name: Preflight — check free space in {{ vm_storage_pool }}
   ansible.builtin.shell:
-    cmd: "pvesm status | awk -v pool='{{ vm_storage_pool }}' '$1 == pool {print $6}'"
-  register: storage_free
-  failed_when: (storage_free.stdout | int / 1048576) | int < storage_min_free_gb
+    cmd: "set -o pipefail; pvesm status | awk -v pool='{{ vm_storage_pool }}' '$1 == pool {print $6}'"
+  register: ct_storage_free
+  failed_when: (ct_storage_free.stdout | int / 1048576) | int < storage_min_free_gb
   changed_when: false
 
 - name: Check snippets directory exists
   ansible.builtin.stat:
     path: "{{ snippets_path }}"
-  register: snippets_dir
+  register: ct_snippets_dir
 
 - name: Create snippets directory if it doesn't exist
   ansible.builtin.file:
@@ -81,48 +81,50 @@
     owner: root
     group: root
     mode: '0755'
-  when: not snippets_dir.stat.exists
+  when: not ct_snippets_dir.stat.exists
 
 # Check VM existence
 - name: Check if VMs/Templates exist
   ansible.builtin.shell:
     cmd: "test -f /etc/pve/nodes/$(hostname)/qemu-server/{{ item.vm_id }}.conf && echo 'exists' || echo 'not_exists'"
-  register: vm_status
-  loop: "{{ active_templates }}"
+  register: ct_vm_status
+  loop: "{{ ct_active_templates }}"
   changed_when: false
 
 # Create VM existence dictionary
 - name: Create VM existence dictionary
   ansible.builtin.set_fact:
-    vm_existence_dict: "{{ vm_existence_dict | default({}) | combine({r.item.vm_id: r.stdout}) }}"
-  loop: "{{ vm_status.results }}"
+    ct_vm_existence: "{{ ct_vm_existence | default({}) | combine({item.item.vm_id: item.stdout}) }}"
+  loop: "{{ ct_vm_status.results }}"
 
 - name: Stop running VMs if they exist before destroying
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "qm stop {{ item.vm_id }}"
-  loop: "{{ active_templates }}"
+  loop: "{{ ct_active_templates }}"
   when:
-    - vm_existence_dict[item.vm_id] == "exists"
+    - ct_vm_existence[item.vm_id] == "exists"
     - item.recreate | bool
-  ignore_errors: yes
-  register: stop_result
-  until: stop_result.rc == 0
+  ignore_errors: true
+  register: ct_stop_result
+  changed_when: true
+  until: ct_stop_result.rc == 0
   retries: 3
   delay: 10
 
 - name: Destroy existing VMs/Templates if they exist and recreate is true
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "qm destroy {{ item.vm_id }} --purge"
-  loop: "{{ active_templates }}"
+  loop: "{{ ct_active_templates }}"
   when:
-    - vm_existence_dict[item.vm_id] == "exists"
+    - ct_vm_existence[item.vm_id] == "exists"
     - item.recreate | bool
+  changed_when: true
 
 - name: Validate CPU configuration before VM creation
   ansible.builtin.fail:
     msg: "Invalid CPU type format for {{ item.name }}: {{ item.cpu_type }}. Use simple types like 'host', 'kvm64', 'x86-64-v2', etc."
   when: "'flags=' in item.cpu_type or ';' in item.cpu_type or ',' in item.cpu_type"
-  loop: "{{ active_templates }}"
+  loop: "{{ ct_active_templates }}"
 
 - name: Create VMs with CPU configuration
   ansible.builtin.shell:
@@ -137,54 +139,55 @@
         --cpu "{{ item.cpu_type }}" \
         --scsihw {{ item.scsihw }} \
         --agent {{ item.agent }}
-  loop: "{{ active_templates }}"
+  loop: "{{ ct_active_templates }}"
   when:
-    - vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
+    - ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
   args:
     executable: /bin/bash
+  changed_when: true
 
 - name: Verify VMs were created
   ansible.builtin.shell:
     cmd: "ls /etc/pve/nodes/$(hostname)/qemu-server/{{ item.vm_id }}.conf"
-  register: vm_conf_check
-  loop: "{{ active_templates }}"
+  register: ct_vm_conf_check
+  loop: "{{ ct_active_templates }}"
   when:
-    - vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
+    - ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
   changed_when: false
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Fail fast if VM creation did not produce a config file
   ansible.builtin.fail:
-    msg: "qm create did not produce a config file for: {{ vm_conf_check.results | selectattr('failed', 'true') | map(attribute='item.name') | list }}"
-  when: vm_conf_check.results is defined and vm_conf_check.results | selectattr('failed', 'true') | list | length > 0
+    msg: "qm create did not produce a config file for: {{ ct_vm_conf_check.results | selectattr('failed', 'true') | map(attribute='item.name') | list }}"
+  when: ct_vm_conf_check.results is defined and ct_vm_conf_check.results | selectattr('failed', 'true') | list | length > 0
 
 - name: Debug CPU configuration
   ansible.builtin.shell:
-    cmd: "qm config {{ item.vm_id }} | grep -i cpu || true"
-  register: cpu_config
-  loop: "{{ active_templates }}"
+    cmd: "set -o pipefail; qm config {{ item.vm_id }} | grep -i cpu || true"
+  register: ct_cpu_config
+  loop: "{{ ct_active_templates }}"
   when:
-    - vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
+    - ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
   changed_when: false
 
 - name: Show CPU config
   ansible.builtin.debug:
     msg: "VM {{ item.item.vm_id }} CPU: {{ item.stdout }}"
-  loop: "{{ cpu_config.results }}"
+  loop: "{{ ct_cpu_config.results }}"
   when:
-    - vm_existence_dict[item.item.vm_id] == "not_exists" or item.item.recreate | bool
+    - ct_vm_existence[item.item.vm_id] == "not_exists" or item.item.recreate | bool
 
 # Check cloud images - create lookup dictionary
 - name: Check if cloud images already exist
   ansible.builtin.stat:
     path: "/tmp/{{ item.image_filename }}"
-  register: cloud_images
-  loop: "{{ active_templates }}"
+  register: ct_cloud_images
+  loop: "{{ ct_active_templates }}"
 
 - name: Create cloud images dictionary for easy lookup
   ansible.builtin.set_fact:
-    cloud_images_dict: "{{ cloud_images_dict | default({}) | combine({ item.item.name: item }) }}"
-  loop: "{{ cloud_images.results }}"
+    ct_cloud_images_dict: "{{ ct_cloud_images_dict | default({}) | combine({item.item.name: item}) }}"
+  loop: "{{ ct_cloud_images.results }}"
 
 - name: Download cloud images if they don't exist
   ansible.builtin.get_url:
@@ -192,49 +195,50 @@
     dest: "/tmp/{{ item.image_filename }}"
     mode: '0644'
     force: false
-  loop: "{{ active_templates }}"
+  loop: "{{ ct_active_templates }}"
   when:
-    - not cloud_images_dict[item.name].stat.exists
+    - not ct_cloud_images_dict[item.name].stat.exists
   tags: [download]
 
 - name: Debug download status
   ansible.builtin.debug:
-    msg: "Image for {{ item.name }} {{ 'will be downloaded' if not cloud_images_dict[item.name].stat.exists else 'already exists' }}"
-  loop: "{{ active_templates }}"
+    msg: "Image for {{ item.name }} {{ 'will be downloaded' if not ct_cloud_images_dict[item.name].stat.exists else 'already exists' }}"
+  loop: "{{ ct_active_templates }}"
 
 - name: Check available storage before import
   ansible.builtin.shell:
-    cmd: "pvesm status | grep '{{ vm_storage_pool }}' || true"
-  register: storage_check
+    cmd: "set -o pipefail; pvesm status | grep '{{ vm_storage_pool }}' || true"
+  register: ct_storage_check
+  changed_when: false
 
 - name: Debug storage info
   ansible.builtin.debug:
-    var: storage_check.stdout
+    var: ct_storage_check.stdout
 
 # Import cloud images
 - name: Import cloud images
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "qm importdisk {{ item.vm_id }} /tmp/{{ item.image_filename }} {{ vm_storage_pool }} --format qcow2"
-  loop: "{{ active_templates }}"
+  loop: "{{ ct_active_templates }}"
   when:
-    - (vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool) and cloud_images_dict[item.name].stat.exists
+    - (ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool) and ct_cloud_images_dict[item.name].stat.exists
   async: 1200
   poll: 15
-  register: import_result
-  failed_when: import_result.rc != 0 and 'already exists' not in import_result.stderr
-  changed_when: "'importing' in import_result.stdout"
+  register: ct_import_result
+  failed_when: ct_import_result.rc != 0 and 'already exists' not in ct_import_result.stderr
+  changed_when: "'importing' in ct_import_result.stdout"
 
 - name: Fail if any import failed
   ansible.builtin.fail:
-    msg: "Import failed for: {{ import_result.results | selectattr('failed', 'true') | map(attribute='item.name') | list }}"
-  when: import_result.results is defined and import_result.results | selectattr('failed', 'true') | list | length > 0
+    msg: "Import failed for: {{ ct_import_result.results | selectattr('failed', 'true') | map(attribute='item.name') | list }}"
+  when: ct_import_result.results is defined and ct_import_result.results | selectattr('failed', 'true') | list | length > 0
 
 - name: Show final import status
   ansible.builtin.debug:
     msg: "Import {{ 'completed' if not item.failed else 'failed' }} for {{ item.item.name }}"
-  loop: "{{ import_result.results }}"
+  loop: "{{ ct_import_result.results }}"
   when:
-    - (vm_existence_dict[item.item.vm_id] == "not_exists" or item.item.recreate | bool) and cloud_images_dict[item.item.name].stat.exists
+    - (ct_vm_existence[item.item.vm_id] == "not_exists" or item.item.recreate | bool) and ct_cloud_images_dict[item.item.name].stat.exists
 
 # 1. Attach disk with optimal parameters
 - name: Attach imported disk to VM
@@ -243,54 +247,59 @@
       qm set {{ item.vm_id }} \
       --scsi0 "{{ vm_storage_pool }}:vm-{{ item.vm_id }}-disk-0,discard=on,ssd=1" \
       --boot order=scsi0
-  loop: "{{ active_templates }}"
-  when: vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
-  register: set_disk_result
-  until: set_disk_result.rc == 0
+  loop: "{{ ct_active_templates }}"
+  when: ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
+  register: ct_set_disk_result
+  changed_when: true
+  until: ct_set_disk_result.rc == 0
   retries: 3
   delay: 10
 
 # 2. Attach cloud-init CD-ROM
 - name: Add cloud-init drive
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "qm set {{ item.vm_id }} --ide2 {{ vm_storage_pool }}:cloudinit"
-  loop: "{{ active_templates }}"
-  when: vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
-  register: set_ci_drive_result
-  until: set_ci_drive_result.rc == 0
+  loop: "{{ ct_active_templates }}"
+  when: ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
+  register: ct_set_ci_drive_result
+  changed_when: true
+  until: ct_set_ci_drive_result.rc == 0
   retries: 3
   delay: 10
 
 # 3. Attach network interface
 - name: Add network interface to VM
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "qm set {{ item.vm_id }} --net0 virtio,bridge={{ item.vm_network_bridge }}"
-  loop: "{{ active_templates }}"
-  when: vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
-  register: set_net_result
-  until: set_net_result.rc == 0
+  loop: "{{ ct_active_templates }}"
+  when: ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
+  register: ct_set_net_result
+  changed_when: true
+  until: ct_set_net_result.rc == 0
   retries: 3
   delay: 10
 
 # 4. DHCP as network fallback
 - name: Set default Cloud-Init network config (DHCP fallback)
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "qm set {{ item.vm_id }} --ipconfig0 ip=dhcp"
-  loop: "{{ active_templates }}"
-  when: vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
-  register: set_ip_result
-  until: set_ip_result.rc == 0
+  loop: "{{ ct_active_templates }}"
+  when: ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
+  register: ct_set_ip_result
+  changed_when: true
+  until: ct_set_ip_result.rc == 0
   retries: 3
   delay: 10
 
 # 5. Convert to template
 - name: Convert VMs to templates
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "qm template {{ item.vm_id }}"
-  loop: "{{ active_templates }}"
-  when: vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool
-  register: template_result
-  until: template_result.rc == 0
+  loop: "{{ ct_active_templates }}"
+  when: ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
+  register: ct_template_result
+  changed_when: true
+  until: ct_template_result.rc == 0
   retries: 3
   delay: 10
 
@@ -299,5 +308,5 @@
   ansible.builtin.file:
     path: "/tmp/{{ item.image_filename }}"
     state: absent
-  loop: "{{ active_templates }}"
-  when: (vm_existence_dict[item.vm_id] == "not_exists" or item.recreate | bool) and item.cleanup_image | bool and cloud_images_dict[item.name].stat.exists
+  loop: "{{ ct_active_templates }}"
+  when: (ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool) and item.cleanup_image | bool and ct_cloud_images_dict[item.name].stat.exists

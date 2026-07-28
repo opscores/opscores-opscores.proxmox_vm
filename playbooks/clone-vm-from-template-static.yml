@@ -2,9 +2,6 @@
 - name: Clone VM from Template with Static IP
   hosts: proxmox
   serial: 1
-  collections:
-    - opscores.proxmox_vm
-
   vars:
     # Source template configuration
     source_vm_id: 3002      # Source template ID (3000=Ubuntu24, 3004=Ubuntu26, 3001=AlmaLinux, 3002=Fedora)
@@ -36,5 +33,5 @@
 
   tasks:
     - name: Clone VM with Static IP
-      include_role:
-        name: clone_vm
+      ansible.builtin.include_role:
+        name: opscores.proxmox_vm.clone_vm
