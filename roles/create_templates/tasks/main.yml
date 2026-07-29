@@ -78,11 +78,12 @@
 - name: "Validate template IDs for {{ item.name }} are in Proxmox ID range"
   ansible.builtin.assert:
     that:
-      - ct_active_templates[item.key].vm_id | int >= 100
-      - ct_active_templates[item.key].vm_id | int <= 999999999
+      - item.vm_id | int >= 100
+      - item.vm_id | int <= 999999999
     fail_msg: >
-      Invalid template ID {{ ct_active_templates[item.key].vm_id }} for '{{ item.name }}'.
+      Invalid template ID {{ item.vm_id }} for '{{ item.name }}'.
       Must be between 100 and 999999999.
+  loop: "{{ ct_active_templates }}"
 
 - name: Check snippets directory exists
   ansible.builtin.stat:
@@ -142,28 +143,30 @@
   loop: "{{ ct_active_templates }}"
 
 - name: Create VMs with CPU configuration
-  ansible.builtin.shell:
-    cmd: |
-      qm create {{ item.vm_id }} \
-        --name "{{ item.vm_name }}" \
-        --memory {{ item.vm_memory }} \
-        --cores {{ item.vm_cores }} \
-        --ostype {{ item.ostype }} \
-        --machine {{ item.machine }} \
-        --bios {{ item.bios }} \
-        --cpu "{{ item.cpu_type }}" \
-        --scsihw {{ item.scsihw }} \
-        --agent {{ item.agent }}
+  ansible.builtin.command:
+    cmd: >
+      qm create {{ item.vm_id }}
+      --name {{ item.vm_name }}
+      --memory {{ item.vm_memory }}
+      --cores {{ item.vm_cores }}
+      --ostype {{ item.ostype }}
+      --machine {{ item.machine }}
+      --bios {{ item.bios }}
+      --cpu {{ item.cpu_type }}
+      --scsihw {{ item.scsihw }}
+      --agent {{ item.agent }}
   loop: "{{ ct_active_templates }}"
   when:
     - ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
-  args:
-    executable: /bin/bash
+  register: ct_create_result
   changed_when: true
+  until: ct_create_result.rc == 0
+  retries: 3
+  delay: 10
 
 - name: Verify VMs were created
-  ansible.builtin.shell:
-    cmd: "ls /etc/pve/nodes/{{ target_node }}/qemu-server/{{ item.vm_id }}.conf"
+  ansible.builtin.command:
+    cmd: "test -f /etc/pve/nodes/{{ target_node }}/qemu-server/{{ item.vm_id }}.conf"
   register: ct_vm_conf_check
   loop: "{{ ct_active_templates }}"
   when:
@@ -214,6 +217,10 @@
   loop: "{{ ct_active_templates }}"
   when:
     - not ct_cloud_images_dict[item.name].stat.exists
+  register: ct_download_result
+  until: ct_download_result is succeeded
+  retries: 3
+  delay: 10
   tags: [download]
 
 - name: Debug download status
@@ -260,10 +267,10 @@
 
 # 1. Attach disk with optimal parameters
 - name: Attach imported disk to VM
-  ansible.builtin.shell:
-    cmd: |
-      qm set {{ item.vm_id }} \
-      --scsi0 "{{ vm_storage_pool }}:vm-{{ item.vm_id }}-disk-0,discard=on,ssd=1" \
+  ansible.builtin.command:
+    cmd: >
+      qm set {{ item.vm_id }}
+      --scsi0 {{ vm_storage_pool }}:vm-{{ item.vm_id }}-disk-0,discard=on,ssd=1
       --boot order=scsi0
   loop: "{{ ct_active_templates }}"
   when: ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool

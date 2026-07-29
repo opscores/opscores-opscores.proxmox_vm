@@ -104,7 +104,7 @@
   ansible.builtin.command:
     cmd: "qm stop {{ new_vm_id }}"
   when: cv_vm_config_exists.rc == 0 and recreate_vm | bool
-  ignore_errors: true
+  failed_when: false
   register: cv_stop_result
   changed_when: true
   until: cv_stop_result.rc == 0
