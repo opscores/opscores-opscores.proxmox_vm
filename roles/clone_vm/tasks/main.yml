@@ -47,14 +47,15 @@
 
 # 4. Verify local storage has snippets content type (precise check)
 - name: "Verify local storage supports snippets"
-  ansible.builtin.shell:
-    cmd: |
-      awk '
+  ansible.builtin.command:
+    argv:
+      - awk
+      - |
         /^local:/ { in_local=1 }
         /^[^ ]/ && !/^local:/ { in_local=0 }
         in_local && /content.*snippets/ { found=1 }
         END { exit (found ? 0 : 1) }
-      ' /etc/pve/storage.cfg
+      - /etc/pve/storage.cfg
   register: cv_snippets_check
   changed_when: false
   failed_when: cv_snippets_check.rc != 0
@@ -172,18 +173,17 @@
 
 # 9. Memory / Cores / OS type / Machine / BIOS / CPU / SCSI / Agent
 - name: "Configure VM hardware (memory, cores, ostype, machine, bios, cpu, scsihw, agent)"
-  ansible.builtin.shell:
-    cmd: |
-      CMD="qm set {{ new_vm_id }}"
-      {% if clone_vm_memory is defined and clone_vm_memory != omit %}CMD+=" --memory {{ clone_vm_memory }}"{% endif %}
-      {% if clone_vm_cores is defined and clone_vm_cores != omit %}CMD+=" --cores {{ clone_vm_cores }}"{% endif %}
-      {% if clone_vm_ostype is defined and clone_vm_ostype != omit %}CMD+=" --ostype {{ clone_vm_ostype }}"{% endif %}
-      {% if clone_vm_machine is defined and clone_vm_machine != omit %}CMD+=" --machine {{ clone_vm_machine }}"{% endif %}
-      {% if clone_vm_bios is defined and clone_vm_bios != omit %}CMD+=" --bios {{ clone_vm_bios }}"{% endif %}
-      {% if clone_vm_cpu is defined and clone_vm_cpu != omit %}CMD+=" --cpu {{ clone_vm_cpu }}"{% endif %}
-      {% if clone_vm_scsihw is defined and clone_vm_scsihw != omit %}CMD+=" --scsihw {{ clone_vm_scsihw }}"{% endif %}
-      {% if clone_vm_agent is defined and clone_vm_agent != omit %}CMD+=" --agent {{ clone_vm_agent }}"{% endif %}
-      eval "$CMD"
+  ansible.builtin.command:
+    cmd: >-
+      qm set {{ new_vm_id }}
+      {% if clone_vm_memory is defined and clone_vm_memory != omit %}--memory {{ clone_vm_memory }}{% endif %}
+      {% if clone_vm_cores is defined and clone_vm_cores != omit %}--cores {{ clone_vm_cores }}{% endif %}
+      {% if clone_vm_ostype is defined and clone_vm_ostype != omit %}--ostype {{ clone_vm_ostype }}{% endif %}
+      {% if clone_vm_machine is defined and clone_vm_machine != omit %}--machine {{ clone_vm_machine }}{% endif %}
+      {% if clone_vm_bios is defined and clone_vm_bios != omit %}--bios {{ clone_vm_bios }}{% endif %}
+      {% if clone_vm_cpu is defined and clone_vm_cpu != omit %}--cpu {{ clone_vm_cpu }}{% endif %}
+      {% if clone_vm_scsihw is defined and clone_vm_scsihw != omit %}--scsihw {{ clone_vm_scsihw }}{% endif %}
+      {% if clone_vm_agent is defined and clone_vm_agent != omit %}--agent {{ clone_vm_agent }}{% endif %}
   when: cv_vm_config_exists.rc != 0 or recreate_vm | bool
   register: cv_config_result
   changed_when: "cv_config_result.stderr | length > 0"

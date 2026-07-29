@@ -101,16 +101,17 @@
 
 # Check VM existence
 - name: Check if VMs/Templates exist
-  ansible.builtin.shell:
-    cmd: "test -f /etc/pve/nodes/{{ target_node }}/qemu-server/{{ item.vm_id }}.conf && echo 'exists' || echo 'not_exists'"
+  ansible.builtin.command:
+    cmd: "test -f /etc/pve/nodes/{{ target_node }}/qemu-server/{{ item.vm_id }}.conf"
   register: ct_vm_status
   loop: "{{ ct_active_templates }}"
   changed_when: false
+  failed_when: false
 
 # Create VM existence dictionary
 - name: Create VM existence dictionary
   ansible.builtin.set_fact:
-    ct_vm_existence: "{{ ct_vm_existence | default({}) | combine({item.item.vm_id: item.stdout}) }}"
+    ct_vm_existence: "{{ ct_vm_existence | default({}) | combine({item.item.vm_id: 'exists' if item.rc == 0 else 'not_exists'}) }}"
   loop: "{{ ct_vm_status.results }}"
 
 - name: Stop running VMs if they exist before destroying
