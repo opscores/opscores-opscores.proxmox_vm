@@ -31,7 +31,7 @@ packages:
   - dnf-utils
   - firewalld
 
-# Пользователи (RHEL-specific groups)
+# Users (RHEL-specific groups)
 users:
   - name: {{ cloud_user }}
     primary_group: {{ cloud_user }}
@@ -43,25 +43,24 @@ users:
     ssh_authorized_keys:
       - {{ ssh_public_key }}
 
-# Безопасность
-ssh_pwauth: true
-# disable_root: true blocks root SSH login declaratively at the cloud-init level
+# Security
+ssh_pwauth: {{ ssh_pwauth | default(true) }}
+# disable_root blocks root SSH login declaratively at the cloud-init level
 # (independent of the base image's sshd_config defaults). Kept consistent with the
 # Ubuntu templates; does not affect cloud_user or its password/ssh_pwauth settings.
 disable_root: true
 
-# Команды при загрузке
+# Boot commands
 bootcmd:
   - [systemd-machine-id-setup]
 
-# Выполняемые команды (RHEL-specific)
+# Executed commands (RHEL-specific)
 runcmd:
-  # Установка hostname
+  # Set hostname
   - [hostnamectl, set-hostname, "{{ new_vm_name }}"]
-  # Настройка времени
+  # Timezone setup
   - [timedatectl, set-timezone, "{{ timezone | default('Europe/Moscow') }}"]
   # QEMU Guest Agent
-  - [systemctl, enable, qemu-guest-agent]
   - [systemctl, start, qemu-guest-agent]
   # Firewall (RHEL-specific)
   - [systemctl, enable, firewalld]
@@ -70,18 +69,17 @@ runcmd:
   - [firewall-cmd, --add-service=http, --permanent]
   - [firewall-cmd, --add-service=https, --permanent]
   - [firewall-cmd, --reload]
-  # Настройка SSH
+  # SSH configuration
   - [sed, -i, 's/^#?PubkeyAuthentication.*/PubkeyAuthentication yes/', /etc/ssh/sshd_config]
   - [sed, -i, 's/#PasswordAuthentication yes/PasswordAuthentication yes/', /etc/ssh/sshd_config]
   - [sed, -i, 's/#PermitRootLogin yes/PermitRootLogin no/', /etc/ssh/sshd_config]
-  - [sed, -i, 's/PasswordAuthentication no/PasswordAuthentication yes/', /etc/ssh/sshd_config]
   - [systemctl, restart, sshd]
-  # Установка прав на SSH-ключи
+  # SSH key permissions setup
   - [chown, -R, '{{ cloud_user }}:{{ cloud_user }}', '/home/{{ cloud_user }}/.ssh']
   - ['chmod', '700', '/home/{{ cloud_user }}/.ssh']
   - ['chmod', '600', '/home/{{ cloud_user }}/.ssh/authorized_keys']
-  # DNF настроики (RHEL-specific)
+  # DNF configuration (RHEL-specific)
   - [dnf, config-manager, --set-enabled, crb]
-# Финальные сообщения
+# Final messages
 
 final_message: "AlmaLinux cloud-init completed successfully at $UPTIME"

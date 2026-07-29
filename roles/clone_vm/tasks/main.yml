@@ -34,7 +34,7 @@
   ansible.builtin.shell:
     cmd: "set -o pipefail; pvesm status | awk -v pool='{{ storage_pool }}' '$1 == pool {print $6}'"
   register: cv_storage_free
-  failed_when: (cv_storage_free.stdout | int / 1048576) | int < storage_min_free_gb
+  failed_when: (cv_storage_free.stdout | int / 1073741824) | int < storage_min_free_gb
   changed_when: false
 
 # 3. Check if VM config exists for {{ new_vm_id }}
@@ -210,6 +210,8 @@
       Resize only supports expanding disks, not shrinking them.
 
 - name: "Resize VM disk if enabled"
+  ansible.builtin.command:
+    cmd: "qm resize {{ new_vm_id }} {{ clone_vm_disk_slot }} {{ clone_vm_disk_size }}"
   when: (cv_vm_config_exists.rc != 0 or recreate_vm | bool) and vm_resize_disk | bool
   register: cv_resize_result
   changed_when: true

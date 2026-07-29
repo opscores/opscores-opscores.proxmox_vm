@@ -62,11 +62,16 @@
   failed_when: ct_storage_active.stdout == ""
   changed_when: false
 
+- name: Set import format based on storage type
+  ansible.builtin.set_fact:
+    ct_import_disk_format: >-
+      {{ 'raw' if (ct_pve_version.stdout | default('dir')) in ['lvm', 'lvmthin', 'zfspool', 'rbd'] else 'qcow2' }}
+
 - name: Preflight — check free space in {{ vm_storage_pool }}
   ansible.builtin.shell:
     cmd: "set -o pipefail; pvesm status | awk -v pool='{{ vm_storage_pool }}' '$1 == pool {print $6}'"
   register: ct_storage_free
-  failed_when: (ct_storage_free.stdout | int / 1048576) | int < storage_min_free_gb
+  failed_when: (ct_storage_free.stdout | int / 1073741824) | int < storage_min_free_gb
   changed_when: false
 
 # Validate VM IDs are in valid range
@@ -96,7 +101,7 @@
 # Check VM existence
 - name: Check if VMs/Templates exist
   ansible.builtin.shell:
-    cmd: "test -f /etc/pve/nodes/$(hostname)/qemu-server/{{ item.vm_id }}.conf && echo 'exists' || echo 'not_exists'"
+    cmd: "test -f /etc/pve/nodes/{{ target_node }}/qemu-server/{{ item.vm_id }}.conf && echo 'exists' || echo 'not_exists'"
   register: ct_vm_status
   loop: "{{ ct_active_templates }}"
   changed_when: false
@@ -114,7 +119,7 @@
   when:
     - ct_vm_existence[item.vm_id] == "exists"
     - item.recreate | bool
-  ignore_errors: true
+  failed_when: false
   register: ct_stop_result
   changed_when: true
   until: ct_stop_result.rc == 0
@@ -158,13 +163,12 @@
 
 - name: Verify VMs were created
   ansible.builtin.shell:
-    cmd: "ls /etc/pve/nodes/$(hostname)/qemu-server/{{ item.vm_id }}.conf"
+    cmd: "ls /etc/pve/nodes/{{ target_node }}/qemu-server/{{ item.vm_id }}.conf"
   register: ct_vm_conf_check
   loop: "{{ ct_active_templates }}"
   when:
     - ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
   changed_when: false
-  ignore_errors: true
 
 - name: Fail fast if VM creation did not produce a config file
   ansible.builtin.fail:
@@ -176,6 +180,7 @@
     cmd: "set -o pipefail; qm config {{ item.vm_id }} | grep -i cpu || true"
   register: ct_cpu_config
   loop: "{{ ct_active_templates }}"
+  verbosity: 1
   when:
     - ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
   changed_when: false
@@ -186,6 +191,7 @@
   loop: "{{ ct_cpu_config.results }}"
   when:
     - ct_vm_existence[item.item.vm_id] == "not_exists" or item.item.recreate | bool
+  verbosity: 1
 
 # Check cloud images - create lookup dictionary
 - name: Check if cloud images already exist
@@ -212,6 +218,7 @@
 
 - name: Debug download status
   ansible.builtin.debug:
+    verbosity: 1
     msg: "Image for {{ item.name }} {{ 'will be downloaded' if not ct_cloud_images_dict[item.name].stat.exists else 'already exists' }}"
   loop: "{{ ct_active_templates }}"
 
@@ -223,12 +230,13 @@
 
 - name: Debug storage info
   ansible.builtin.debug:
+    verbosity: 1
     var: ct_storage_check.stdout
 
 # Import cloud images
 - name: Import cloud images
   ansible.builtin.command:
-    cmd: "qm importdisk {{ item.vm_id }} /tmp/{{ item.image_filename }} {{ vm_storage_pool }} --format qcow2"
+    cmd: "qm importdisk {{ item.vm_id }} /tmp/{{ item.image_filename }} {{ vm_storage_pool }} --format {{ ct_import_disk_format }}"
   loop: "{{ ct_active_templates }}"
   when:
     - (ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool) and ct_cloud_images_dict[item.name].stat.exists
