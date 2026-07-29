@@ -131,7 +131,7 @@
 # 7. Verify source template {{ source_vm_id }} exists
 - name: "Check if source template exists and is a template"
   ansible.builtin.shell:
-    cmd: "set -o pipefail; qm config {{ source_vm_id }} | grep -q 'template: 1'"
+    cmd: "set -o pipefail; qm config {{ source_vm_id }} | grep -qx 'template: 1'"
   register: cv_template_check
   changed_when: false
   failed_when: cv_template_check.rc != 0
