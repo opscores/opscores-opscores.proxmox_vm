@@ -275,7 +275,7 @@
   loop: "{{ ct_active_templates }}"
   when: ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
   register: ct_set_disk_result
-  changed_when: true
+  changed_when: "ct_set_disk_result.stderr | length > 0"
   until: ct_set_disk_result.rc == 0
   retries: 3
   delay: 10
@@ -287,7 +287,7 @@
   loop: "{{ ct_active_templates }}"
   when: ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
   register: ct_set_ci_drive_result
-  changed_when: true
+  changed_when: "ct_set_ci_drive_result.stderr | length > 0"
   until: ct_set_ci_drive_result.rc == 0
   retries: 3
   delay: 10
@@ -299,7 +299,7 @@
   loop: "{{ ct_active_templates }}"
   when: ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
   register: ct_set_net_result
-  changed_when: true
+  changed_when: "ct_set_net_result.stderr | length > 0"
   until: ct_set_net_result.rc == 0
   retries: 3
   delay: 10
@@ -311,7 +311,7 @@
   loop: "{{ ct_active_templates }}"
   when: ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
   register: ct_set_ip_result
-  changed_when: true
+  changed_when: "ct_set_ip_result.stderr | length > 0"
   until: ct_set_ip_result.rc == 0
   retries: 3
   delay: 10

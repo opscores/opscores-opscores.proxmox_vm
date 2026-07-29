@@ -171,7 +171,7 @@
       eval "$CMD"
   when: cv_vm_config_exists.rc != 0 or recreate_vm | bool
   register: cv_config_result
-  changed_when: true
+  changed_when: "cv_config_result.stderr | length > 0"
   failed_when: cv_config_result.rc != 0 and 'no state change' not in cv_config_result.stderr
   until: cv_config_result.rc == 0
   retries: 3
@@ -214,7 +214,7 @@
     cmd: "qm resize {{ new_vm_id }} {{ clone_vm_disk_slot }} {{ clone_vm_disk_size }}"
   when: (cv_vm_config_exists.rc != 0 or recreate_vm | bool) and vm_resize_disk | bool
   register: cv_resize_result
-  changed_when: true
+  changed_when: "cv_resize_result.stderr | length > 0"
   failed_when: cv_resize_result.rc != 0 and 'no state change' not in cv_resize_result.stderr
   until: cv_resize_result.rc == 0
   retries: 3
@@ -277,7 +277,7 @@
       --searchdomain '{{ search_domains }}' --ciupgrade 0
   when: (cv_vm_config_exists.rc != 0 or recreate_vm | bool) and (use_dhcp_ip | default(true))
   register: cv_set_dhcp_result
-  changed_when: true
+  changed_when: "cv_set_dhcp_result.stderr | length > 0"
   until: cv_set_dhcp_result.rc == 0
   retries: 3
   delay: 10
@@ -291,7 +291,7 @@
       --nameserver '{{ dns_servers }}' --searchdomain '{{ search_domains }}' --ciupgrade 0
   when: (cv_vm_config_exists.rc != 0 or recreate_vm | bool) and (not use_dhcp_ip | default(true)) and static_ip_address != "" and static_gateway != ""
   register: cv_set_static_result
-  changed_when: true
+  changed_when: "cv_set_static_result.stderr | length > 0"
   until: cv_set_static_result.rc == 0
   retries: 3
   delay: 10
@@ -302,7 +302,7 @@
     cmd: "qm cloudinit update {{ new_vm_id }}"
   when: cv_vm_config_exists.rc != 0 or recreate_vm | bool
   register: cv_ci_update_result
-  changed_when: true
+  changed_when: "cv_ci_update_result.stderr | length > 0"
   until: cv_ci_update_result.rc == 0
   retries: 3
   delay: 10
