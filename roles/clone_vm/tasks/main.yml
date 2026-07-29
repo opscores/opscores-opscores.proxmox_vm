@@ -24,7 +24,7 @@
 # 1. Verify target storage exists and is active
 - name: "Preflight — verify target storage exists and active ({{ storage_pool }})"
   ansible.builtin.shell:
-    cmd: "set -o pipefail; pvesm status | awk -v pool='{{ storage_pool }}' '$1 == pool && $2 == \"active\" {print $0}'"
+    cmd: "set -o pipefail; pvesm status | awk -v pool='{{ storage_pool }}' '$1 == pool && $3 == \"active\" {print $0}'"
   register: cv_storage_active
   failed_when: cv_storage_active.stdout == ""
   changed_when: false
@@ -34,7 +34,7 @@
   ansible.builtin.shell:
     cmd: "set -o pipefail; pvesm status | awk -v pool='{{ storage_pool }}' '$1 == pool {print $6}'"
   register: cv_storage_free
-  failed_when: (cv_storage_free.stdout | int / 1073741824) | int < storage_min_free_gb
+  failed_when: (cv_storage_free.stdout | int / 1048576) | int < storage_min_free_gb
   changed_when: false
 
 # 3. Check if VM config exists for {{ new_vm_id }}
@@ -47,15 +47,8 @@
 
 # 4. Verify local storage has snippets content type (precise check)
 - name: "Verify local storage supports snippets"
-  ansible.builtin.command:
-    argv:
-      - awk
-      - |
-        /^local:/ { in_local=1 }
-        /^[^ ]/ && !/^local:/ { in_local=0 }
-        in_local && /content.*snippets/ { found=1 }
-        END { exit (found ? 0 : 1) }
-      - /etc/pve/storage.cfg
+  ansible.builtin.shell:
+    cmd: "awk '/^dir: local/ { in_local=1 } /^[^[:blank:]]/ && !/^dir: local/ { in_local=0 } in_local && /content.*snippets/ { found=1 } END { exit (found ? 0 : 1) }' /etc/pve/storage.cfg"
   register: cv_snippets_check
   changed_when: false
   failed_when: cv_snippets_check.rc != 0
@@ -211,11 +204,15 @@
       CURRENT=$(echo "{{ cv_current_size_raw.stdout }}" | grep -oP '{{ clone_vm_disk_slot }}.*size=\K[^,]*' || echo '') && \
       NEW="{{ clone_vm_disk_size }}" && \
       if [ "${CURRENT}" = "" ]; then exit 0; fi && \
-      NUM_CURRENT="${CURRENT//G/}"; NUM_NEW="${NEW//[!0-9]/}" && \
-      if [[ "$NUM_NEW" =~ ^[0-9]+$ ]] && (( NUM_NEW > NUM_CURRENT )); then echo "OK: ${NEW} > ${NUM_CURRENT}"; else exit 1; fi
+      CUR_VAL="${CURRENT%[GgMm]}"; CUR_UNIT="${CURRENT: -1}" && \
+      NEW_VAL="${NEW%[GgMm]}"; NEW_UNIT="${NEW: -1}" && \
+      if [ "$CUR_UNIT" = "M" ]; then CUR_MB="$CUR_VAL"; elif [ "$CUR_UNIT" = "G" ]; then CUR_MB=$(( CUR_VAL * 1024 )); else CUR_MB="$CUR_VAL"; fi && \
+      if [ "$NEW_UNIT" = "G" ]; then NEW_MB=$(( NEW_VAL * 1024 )); elif [ "$NEW_UNIT" = "M" ]; then NEW_MB="$NEW_VAL"; else NEW_MB="$NEW_VAL"; fi && \
+      if [[ "$NEW_MB" =~ ^[0-9]+$ ]] && (( NEW_MB > CUR_MB )); then echo "OK: ${NEW} > ${CURRENT}"; else exit 1; fi
     executable: /bin/bash
   register: cv_disk_validation
   changed_when: false
+  failed_when: false
   when: (cv_vm_config_exists.rc != 0 or recreate_vm | bool) and vm_resize_disk | bool
 
 - name: "Fail if new disk size is not larger than current"
@@ -223,6 +220,10 @@
     msg: >
       Disk resize would shrink {{ clone_vm_disk_slot }} from {{ cv_current_size_raw.stdout }} to {{ clone_vm_disk_size }}.
       Resize only supports expanding disks, not shrinking them.
+  when:
+    - cv_disk_validation is not skipped
+    - cv_disk_validation.rc is defined
+    - cv_disk_validation.rc != 0
 
 - name: "Resize VM disk if enabled"
   ansible.builtin.command:
@@ -251,18 +252,13 @@
 # ============================================================
 
 # 12. Validate cloud-init template exists for os_type
-- name: "Validate cloud-init template exists for os_type"
-  ansible.builtin.stat:
-    path: "{{ role_path }}/templates/cloud-init-{{ os_type }}.yaml.j2"
-  register: cv_ci_template
-
 - name: "Fail if cloud-init template not found"
   ansible.builtin.fail:
     msg: >
       Cloud-init template for os_type='{{ os_type }}' not found.
       Available: {{ lookup('fileglob', role_path ~ '/templates/cloud-init-*.yaml.j2', wantlist=True)
                     | map('basename') | map('regex_replace', '^cloud-init-|\.yaml\.j2$', '') | list }}
-  when: not cv_ci_template.stat.exists
+  when: lookup('fileglob', role_path ~ '/templates/cloud-init-' ~ os_type ~ '.yaml.j2') == ''
 
 # 12a. Validate static IP configuration
 - name: "Fail if static IP configured without required addresses"

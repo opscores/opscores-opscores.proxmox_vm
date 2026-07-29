@@ -57,7 +57,7 @@
 
 - name: Preflight — verify storage pool exists and active ({{ vm_storage_pool }})
   ansible.builtin.shell:
-    cmd: "set -o pipefail; pvesm status | awk -v pool='{{ vm_storage_pool }}' '$1 == pool && $2 == \"active\" {print $0}'"
+    cmd: "set -o pipefail; pvesm status | awk -v pool='{{ vm_storage_pool }}' '$1 == pool && $3 == \"active\" {print $0}'"
   register: ct_storage_active
   failed_when: ct_storage_active.stdout == ""
   changed_when: false
@@ -71,7 +71,7 @@
   ansible.builtin.shell:
     cmd: "set -o pipefail; pvesm status | awk -v pool='{{ vm_storage_pool }}' '$1 == pool {print $6}'"
   register: ct_storage_free
-  failed_when: (ct_storage_free.stdout | int / 1073741824) | int < storage_min_free_gb
+  failed_when: (ct_storage_free.stdout | int / 1048576) | int < storage_min_free_gb
   changed_when: false
 
 # Validate VM IDs are in valid range
@@ -184,7 +184,6 @@
     cmd: "set -o pipefail; qm config {{ item.vm_id }} | grep -i cpu || true"
   register: ct_cpu_config
   loop: "{{ ct_active_templates }}"
-  verbosity: 1
   when:
     - ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool
   changed_when: false
@@ -195,7 +194,7 @@
   loop: "{{ ct_cpu_config.results }}"
   when:
     - ct_vm_existence[item.item.vm_id] == "not_exists" or item.item.recreate | bool
-  verbosity: 1
+
 
 # Check cloud images - create lookup dictionary
 - name: Check if cloud images already exist
