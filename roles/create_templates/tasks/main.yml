@@ -69,6 +69,16 @@
   failed_when: (ct_storage_free.stdout | int / 1048576) | int < storage_min_free_gb
   changed_when: false
 
+# Validate VM IDs are in valid range
+- name: "Validate template IDs for {{ item.name }} are in Proxmox ID range"
+  ansible.builtin.assert:
+    that:
+      - ct_active_templates[item.key].vm_id | int >= 100
+      - ct_active_templates[item.key].vm_id | int <= 999999999
+    fail_msg: >
+      Invalid template ID {{ ct_active_templates[item.key].vm_id }} for '{{ item.name }}'.
+      Must be between 100 and 999999999.
+
 - name: Check snippets directory exists
   ansible.builtin.stat:
     path: "{{ snippets_path }}"
@@ -222,8 +232,8 @@
   loop: "{{ ct_active_templates }}"
   when:
     - (ct_vm_existence[item.vm_id] == "not_exists" or item.recreate | bool) and ct_cloud_images_dict[item.name].stat.exists
-  async: 1200
-  poll: 15
+  async: "{{ import_timeout_seconds }}"
+  poll: "{{ import_poll_interval_seconds }}"
   register: ct_import_result
   failed_when: ct_import_result.rc != 0 and 'already exists' not in ct_import_result.stderr
   changed_when: "'importing' in ct_import_result.stdout"

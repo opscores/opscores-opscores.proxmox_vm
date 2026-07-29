@@ -80,8 +80,20 @@
       new_vm_id={{ new_vm_id | default('UNDEFINED') }}, new_vm_name={{ new_vm_name | default('UNDEFINED') }},
       os_type={{ os_type | default('UNDEFINED') }}, target_node={{ target_node | default('UNDEFINED') }},
       storage_pool={{ storage_pool | default('UNDEFINED') }}, full_clone={{ full_clone | default('UNDEFINED') }},
-      cloud_user={{ cloud_user | default('UNDEFINED') }}, cloud_password={{ cloud_password | default('UNDEFINED') }},
-      ssh_public_key={{ ssh_public_key | default('UNDEFINED') }}
+      cloud_user={{ cloud_user | default('***redacted***') }}, cloud_password=***redacted***,
+      ssh_public_key={{ ssh_public_key | default('***redacted***') }}
+
+# ============================================================
+# Validate VM ID range
+# ============================================================
+
+- name: "Validate VM ID is in valid Proxmox range"
+  ansible.builtin.assert:
+    that:
+      - new_vm_id | int >= 100
+      - new_vm_id | int <= 999999999
+    fail_msg: >
+      Invalid VM ID {{ new_vm_id }}. Must be between 100 and 999999999.
 
 # ============================================================
 # Remove existing VM (recreate)
@@ -169,10 +181,35 @@
 # Disk
 # ============================================================
 
-# 10. Resize VM disk
+# 10a. Get current disk size before resize (if enabled)
+- name: "Get current disk size for {{ new_vm_id }} slot {{ clone_vm_disk_slot }}"
+  ansible.builtin.shell:
+    cmd: "set -o pipefail; qm config {{ new_vm_id }} | grep -E '{{ clone_vm_disk_slot }}.*size=' | head -1"
+  register: cv_current_size_raw
+  changed_when: false
+  when: (cv_vm_config_exists.rc != 0 or recreate_vm | bool) and vm_resize_disk | bool
+
+- name: "Validate new disk size is larger than current for {{ clone_vm_disk_slot }}"
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      CURRENT=$(echo "{{ cv_current_size_raw.stdout }}" | grep -oP '{{ clone_vm_disk_slot }}.*size=\K[^,]*' || echo '') && \
+      NEW="{{ clone_vm_disk_size }}" && \
+      if [ "${CURRENT}" = "" ]; then exit 0; fi && \
+      NUM_CURRENT="${CURRENT//G/}"; NUM_NEW="${NEW//[!0-9]/}" && \
+      if [[ "$NUM_NEW" =~ ^[0-9]+$ ]] && (( NUM_NEW > NUM_CURRENT )); then echo "OK: ${NEW} > ${NUM_CURRENT}"; else exit 1; fi
+    executable: /bin/bash
+  register: cv_disk_validation
+  changed_when: false
+  when: (cv_vm_config_exists.rc != 0 or recreate_vm | bool) and vm_resize_disk | bool
+
+- name: "Fail if new disk size is not larger than current"
+  ansible.builtin.fail:
+    msg: >
+      Disk resize would shrink {{ clone_vm_disk_slot }} from {{ cv_current_size_raw.stdout }} to {{ clone_vm_disk_size }}.
+      Resize only supports expanding disks, not shrinking them.
+
 - name: "Resize VM disk if enabled"
-  ansible.builtin.command:
-    cmd: "qm resize {{ new_vm_id }} {{ clone_vm_disk_slot }} {{ clone_vm_disk_size }}"
   when: (cv_vm_config_exists.rc != 0 or recreate_vm | bool) and vm_resize_disk | bool
   register: cv_resize_result
   changed_when: true
@@ -189,7 +226,7 @@
   changed_when: false
   when: (cv_vm_config_exists.rc != 0 or recreate_vm | bool) and vm_resize_disk | bool and cv_resize_result is succeeded
   retries: 5
-  delay: 2
+  delay: 5
   until: cv_disk_size_check.stdout == clone_vm_disk_size
 
 # ============================================================

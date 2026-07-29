@@ -1,30 +1,30 @@
+---
+# Inventory file for opscores.proxmox_vm
+#
+# Sensitive variables (vault_*) are stored in group_vars/all/vault.yml
+# and encrypted with ansible-vault:
+#   ansible-vault encrypt group_vars/all/vault.yml
+#
+# All playbooks must be run with --ask-vault-pass
+
 all:
   children:
     proxmox:
       hosts:
         pve01:
+          # SSH connection — user comes from vault, become via sudo + SSH key
           ansible_host: 192.168.160.200
           ansible_user: "{{ vault_ansible_user | default('ansible') }}"
-          ansible_become: yes
+          ansible_become: true
           ansible_become_method: sudo
           ansible_become_user: root
-          ansible_become_password: "{{ vault_proxmox_password }}"
+
+          # Proxmox API credentials (for qm shell commands)
           proxmox_host: "192.168.160.200"
           proxmox_node: "pve01"
           proxmox_user: "root@pam"
           proxmox_password: "{{ vault_proxmox_password }}"
-          vm_storage_pool: "vmpool"
-          ssh_public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
-          vm_network_bridge: "vmbr0"
-          dns_servers: "8.8.8.8 8.8.4.4"
-          search_domains: "local"
-      vars:
-        cleanup_downloaded_images: false
 
-  vars:
-    ansible_python_interpreter: /usr/bin/python3
-    ansible_ssh_common_args: -o StrictHostKeyChecking=no
-    vm_defaults:
-      memory: 4096
-      cores: 2
-      disk_size: "12G"
+      vars:
+        # Convenience: define SSH key once per inventory group
+        ssh_public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"

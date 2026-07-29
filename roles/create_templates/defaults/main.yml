@@ -4,7 +4,10 @@ snippets_path: "/var/lib/vz/snippets"
 vm_storage_pool: "vmpool"
 tmp_min_free_gb: 5
 storage_min_free_gb: 10
-cleanup_downloaded_images: false
+import_timeout_seconds: 1200       # Maximum time for disk import (async)
+import_poll_interval_seconds: 15   # Polling interval when waiting for async task to complete
+
+cleanup_downloaded_images: true    # Cleanup /tmp after successful template creation
 recreate_templates: false
 
 vm_defaults:

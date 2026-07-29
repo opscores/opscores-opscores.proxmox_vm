@@ -21,6 +21,31 @@ To install this collection, use the ansible-galaxy command:
 ansible-galaxy collection install opscores.proxmox_vm
 ```
 
+## Inventory Setup
+
+Minimal inventory targeting a Proxmox host:
+
+```yaml
+all:
+  children:
+    proxmox:
+      hosts:
+        pve01:
+          ansible_host: 192.168.160.200
+          ansible_user: "{{ vault_ansible_user | default('ansible') }}"
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          proxmox_host: "192.168.160.200"
+          proxmox_node: "pve01"
+          proxmox_user: "root@pam"
+          proxmox_password: "{{ vault_proxmox_password }}"
+      vars:
+        ssh_public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+```
+
+Sensitive variables (`vault_proxmox_password`, `vault_ansible_user`, `vault_cloud_password`) go in `group_vars/all/vault.yml` — see [docs/inventory.example](docs/inventory.example) for the full annotated version and vault setup instructions.
+
 ## Usage
 
 ### Creating VM Templates from Cloud Images
