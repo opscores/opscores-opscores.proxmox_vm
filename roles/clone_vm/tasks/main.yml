@@ -95,6 +95,15 @@
     fail_msg: >
       Invalid VM ID {{ new_vm_id }}. Must be between 100 and 999999999.
 
+- name: "Validate hostname is RFC 1123 compliant"
+  ansible.builtin.assert:
+    that:
+      - new_vm_name is match('^[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?)*$')
+    fail_msg: >
+      Invalid hostname '{{ new_vm_name }}'. RFC 1123 requires: alphanumeric characters,
+      hyphens, and dots only. Each label must start and end with alphanumeric (max 63 chars).
+      Underscores and other special characters are not allowed.
+
 # ============================================================
 # Remove existing VM (recreate)
 # ============================================================
