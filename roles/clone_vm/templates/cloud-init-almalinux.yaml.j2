@@ -5,17 +5,17 @@ hostname: "{{ new_vm_name }}"
 manage_etc_hosts: false
 preserve_hostname: false
 
-# Локализация
+# Locale
 timezone: "{{ timezone | default('Europe/Moscow') }}"
 locale: en_US.UTF-8
 
-# Диск - автоматическое расширение root раздела
+# Disk — automatic root partition resize
 resize_rootfs: true
 growpart:
   mode: auto
   devices: ['/']
 
-# Обновления и пакеты (RHEL-specific)
+# Updates and packages (RHEL-specific)
 package_update: false
 package_upgrade: false
 packages:

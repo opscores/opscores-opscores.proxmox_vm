@@ -1,12 +1,12 @@
 # vars/main.yml
-# Пользовательские переопределения переменных для клонируемых ВМ
+# User overrides for cloned VMs
 
-# Параметры ВМ по умолчанию
-# clone_vm_memory: 4096  # Память в MB
-# clone_vm_cores: 2      # Количество ядер
-# clone_vm_disk_size: "10G"  # Размер диска
+# Default VM parameters
+# clone_vm_memory: 4096  # Memory in MB
+# clone_vm_cores: 2      # Number of CPU cores
+# clone_vm_disk_size: "10G"  # Disk size
 
-# Параметры конфигурации
+# Configuration parameters
 # clone_vm_ostype: "l26"
 # clone_vm_machine: "q35"
 # clone_vm_bios: "seabios"
@@ -15,11 +15,11 @@
 # clone_vm_agent: "enabled=1"
 # clone_vm_disk_slot: "scsi0"
 
-# Параметры пересоздания
-# recreate_vm: true  # Пересоздавать ВМ, если она уже существует
+# Recreate parameters
+# recreate_vm: true  # Recreate VM if it already exists
 
-# Параметры сети
-# use_dhcp_ip: false  # Использовать DHCP вместо статического IP (по умолчанию true)
-# static_ip_address: "192.168.1.100"  # Статический IP-адрес
-# static_subnet_mask: "24"  # Маска подсети
-# static_gateway: "192.168.1.1"  # Статический шлюз
+# Network parameters
+# use_dhcp_ip: false  # Use DHCP instead of static IP (default true)
+# static_ip_address: "192.168.1.100"  # Static IP address
+# static_subnet_mask: "24"  # Subnet mask
+# static_gateway: "192.168.1.1"  # Static gateway
